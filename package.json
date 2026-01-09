@@ -1,10 +1,12 @@
 {
-  "name": "monorepo-template",
+  "name": "numune-form",
   "version": "0.0.0",
   "workspaces": [
     "packages/*"
   ],
-  "scripts": {},
+  "scripts": {
+    "deploy:prod": "npx sst deploy"
+  },
   "devDependencies": {
     "@tsconfig/node22": "^22",
     "typescript": "^5"
