@@ -5,7 +5,10 @@
     "packages/*"
   ],
   "scripts": {
-    "deploy:prod": "npx sst deploy"
+    "dev:local": "npx sst dev --stage $LOCAL_STAGE",
+    "remove:local": "npx sst remove --stage $LOCAL_STAGE",
+    "deploy:prod": "npx sst deploy --stage prod",
+    "remove:prod": "npx sst remove --stage prod"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22",
