@@ -11,14 +11,15 @@ export default $config({
   },
   async run() {
     // await import("./infra/api");
+    // const { googlePrivateKeyB64Secret, mongoUriSecret } = await import("./infra/secrets");
     const { publicBucket } = await import("./infra/storage");
     // const { appRouter } = await import("./infra/router");
     // const { cdnRouter } = await import("./infra/router.cdn");
-    const { nextjs } = await import("./infra/frontend");
+    const { frontend } = await import("./infra/frontend");
 
     return {
       MyBucket: publicBucket.name,
-      NumuneFormFrontend: nextjs.url,
+      // frontend: frontend.default.url,
     };
   },
 });

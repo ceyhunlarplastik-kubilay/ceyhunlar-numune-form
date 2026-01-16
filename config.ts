@@ -1,6 +1,6 @@
 interface ENV {
-    HOSTED_ZONE_ID: string | undefined;
-    DOMAIN: string | undefined;
+    // HOSTED_ZONE_ID: string | undefined;
+    // DOMAIN: string | undefined;
     CLERK_SECRET_KEY: string | undefined;
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string | undefined;
     GOOGLE_EMAIL: string | undefined;
@@ -13,8 +13,8 @@ interface ENV {
 }
 
 interface Config {
-    HOSTED_ZONE_ID: string;
-    DOMAIN: string;
+    // HOSTED_ZONE_ID: string;
+    // DOMAIN: string;
     CLERK_SECRET_KEY: string;
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
     GOOGLE_EMAIL: string;
@@ -28,8 +28,8 @@ interface Config {
 
 const getConfig = (): ENV => {
     return {
-        HOSTED_ZONE_ID: process.env.HOSTED_ZONE_ID,
-        DOMAIN: process.env.DOMAIN,
+        // HOSTED_ZONE_ID: process.env.HOSTED_ZONE_ID,
+        // DOMAIN: process.env.DOMAIN,
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
         GOOGLE_EMAIL: process.env.GOOGLE_EMAIL,
