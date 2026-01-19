@@ -43,6 +43,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
 
 interface Sector {
   _id: string;
@@ -113,33 +114,72 @@ export default function AdminSectorsPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: async (payload: { name: string; imageUrl?: string }) => {
-      const { data } = await axios.post("/api/sectors", payload);
-      return data;
+    mutationFn: async () => {
+      // 1. Create sector
+      const { data: sector } = await axios.post("/api/sectors", {
+        name: name.trim(),
+      });
+
+      // 2. Upload image if exists
+      if (selectedFile) {
+        const imageUrl = await uploadToS3(selectedFile, sector._id);
+
+        // 3. Update sector with image
+        await axios.put("/api/sectors", {
+          id: sector._id,
+          name: sector.name,
+          imageUrl,
+        });
+      }
+
+      return sector;
     },
     onSuccess: () => {
       toast.success("Sektör oluşturuldu");
       qc.invalidateQueries({ queryKey: ["sectors"] });
       closeDialog();
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Hata"),
+    onError: (e: any) => {
+      toast.error(e.response?.data?.error || "Oluşturulamadı");
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: {
-      id: string;
-      name: string;
-      imageUrl?: string;
-    }) => {
-      const { data } = await axios.put("/api/sectors", payload);
-      return data;
+    mutationFn: async () => {
+      if (!editing) throw new Error("Editing sector missing");
+
+      let finalImageUrl = editing.imageUrl || "";
+
+      // 1. Upload new image if selected
+      if (selectedFile) {
+        finalImageUrl = await uploadToS3(selectedFile, editing._id);
+      }
+
+      // 2. Update sector
+      await axios.put("/api/sectors", {
+        id: editing._id,
+        name: name.trim(),
+        imageUrl: removeImageFlag ? "" : finalImageUrl,
+      });
+
+      // 3. Delete old image if needed
+      const shouldDeleteOld =
+        originalImageUrl &&
+        (removeImageFlag ||
+          (finalImageUrl && finalImageUrl !== originalImageUrl));
+
+      if (shouldDeleteOld && originalImageUrl) {
+        await deleteFromS3ByUrl(originalImageUrl).catch(() => { });
+      }
     },
     onSuccess: () => {
       toast.success("Sektör güncellendi");
       qc.invalidateQueries({ queryKey: ["sectors"] });
       closeDialog();
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || "Hata"),
+    onError: (e: any) => {
+      toast.error(e.response?.data?.error || "Güncellenemedi");
+    },
   });
 
   const deleteMutation = useMutation({
@@ -241,77 +281,13 @@ export default function AdminSectorsPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!name.trim()) return;
 
-    let finalImageUrl = editing?.imageUrl || "";
-
-    // IF CREATING
-    if (!editing) {
-      try {
-        // 1. Create Sector first
-        const { data: newSector } = await axios.post("/api/sectors", { name });
-
-        // 2. If file, upload
-        if (selectedFile) {
-          setUploading(true);
-          try {
-            const url = await uploadToS3(selectedFile, newSector._id);
-            // Update sector with image
-            await axios.put("/api/sectors", {
-              id: newSector._id,
-              name: newSector.name,
-              imageUrl: url,
-            });
-          } catch (e) {
-            toast.error("Sektör oluşturuldu ancak görsel yüklenemedi");
-          }
-          setUploading(false);
-        }
-
-        toast.success("Sektör oluşturuldu");
-        qc.invalidateQueries({ queryKey: ["sectors"] });
-        closeDialog();
-      } catch (e: any) {
-        toast.error(e.response?.data?.error || "Oluşturulamadı");
-      }
-      return;
-    }
-
-    // IF EDITING
     if (editing) {
-      // 1. Upload if new file
-      if (selectedFile) {
-        setUploading(true);
-        try {
-          finalImageUrl = await uploadToS3(selectedFile, editing._id);
-        } catch (e: any) {
-          setUploading(false);
-          toast.error("Görsel yüklenemedi");
-          return;
-        }
-        setUploading(false);
-      }
-
-      // 2. Delete old if necessary
-      const shouldDeleteOld =
-        !!originalImageUrl &&
-        (removeImageFlag ||
-          (finalImageUrl && finalImageUrl !== originalImageUrl));
-
-      const payload = {
-        id: editing._id,
-        name,
-        imageUrl: removeImageFlag ? "" : finalImageUrl,
-      };
-
-      updateMutation.mutate(payload, {
-        onSuccess: async () => {
-          if (shouldDeleteOld && originalImageUrl) {
-            await deleteFromS3ByUrl(originalImageUrl).catch(() => { });
-          }
-        },
-      });
+      updateMutation.mutate();
+    } else {
+      createMutation.mutate();
     }
   };
 
@@ -321,6 +297,13 @@ export default function AdminSectorsPage() {
 
   return (
     <div className="space-y-6">
+      <AppBreadcrumb
+        items={[
+          { label: "Ana Sayfa", href: "/" },
+          { label: "Admin", href: "/admin" },
+          { label: "Sektörler" },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Sektörler</h1>
@@ -402,7 +385,7 @@ export default function AdminSectorsPage() {
 
       {/* CREATE / EDIT DIALOG */}
       <Dialog open={isOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Sektör Düzenle" : "Yeni Sektör"}
@@ -410,7 +393,7 @@ export default function AdminSectorsPage() {
             <DialogDescription>Sektör bilgilerini giriniz.</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Sektör Adı</Label>
               <Input
@@ -420,43 +403,61 @@ export default function AdminSectorsPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Kapak Görseli</Label>
-              <div className="flex items-start gap-4">
-                {previewUrl ? (
-                  <div className="relative w-24 h-24 rounded-md overflow-hidden border shrink-0 group">
-                    <Image
-                      src={previewUrl}
-                      alt="Preview"
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                    <button
-                      onClick={removeImageUI}
-                      className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 rounded-md border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground bg-gray-50 shrink-0">
-                    <Upload className="w-6 h-6 mb-1" />
-                    <span className="text-xs">Görsel Seç</span>
-                  </div>
-                )}
 
-                <div className="flex-1 space-y-2">
-                  <Input
+              <div className="flex justify-center">
+                <div className="space-y-3 w-full max-w-xs text-center">
+                  {previewUrl ? (
+                    <div className="relative aspect-square w-full rounded-xl overflow-hidden border shadow-sm group">
+                      <Image
+                        src={previewUrl}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeImageUI}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Görseli Kaldır
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="aspect-square w-full rounded-xl border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors flex flex-col items-center justify-center bg-gray-50/50 cursor-pointer"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                      <p className="text-sm font-medium text-gray-600">
+                        Görsel Yükle
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        PNG, JPG (Max 5MB)
+                      </p>
+                    </div>
+                  )}
+
+                  <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/png, image/jpeg, image/webp"
                     onChange={handleFileSelect}
-                    className="text-sm"
+                    className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Sektör için temsili bir görsel yükleyin.
-                  </p>
+
+                  {uploading && (
+                    <p className="text-xs text-blue-600 flex items-center justify-center font-medium animate-pulse">
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Yükleniyor...
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

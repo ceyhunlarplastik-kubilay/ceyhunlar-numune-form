@@ -40,11 +40,13 @@ export async function POST(req: Request) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
         const safeName = sanitizeFileName(file.name);
-        const key = `sectors/${sectorId}/${Date.now()}-${safeName}`;
+        // const key = `sectors/${sectorId}/${Date.now()}-${safeName}`;
+        const key = `sectors/${sectorId}`;
 
         await s3.send(
             new PutObjectCommand({
-                Bucket: Resource.NumuneFormBucket.name,
+                // Bucket: Resource.NumuneFormBucket.name,
+                Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
                 Key: key,
                 Body: buffer,
                 ContentType: file.type,
@@ -52,7 +54,15 @@ export async function POST(req: Request) {
             })
         );
 
-        const url = `https://${Resource.NumuneFormBucket.name}.s3.amazonaws.com/${key}`;
+        // const url = `https://${Resource.NumuneFormBucket.name}.s3.amazonaws.com/${key}`;
+
+        const stage = process.env.STAGE;
+        const domain = process.env.DOMAIN!;
+
+        const url =
+            stage === "prod" || stage === "dev"
+                ? `https://cdn.${domain}/${key}`
+                : `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`;
 
         return NextResponse.json({ url, key });
     } catch (err) {
@@ -83,7 +93,8 @@ export async function DELETE(req: Request) {
 
         await s3.send(
             new DeleteObjectCommand({
-                Bucket: Resource.NumuneFormBucket.name,
+                // Bucket: Resource.NumuneFormBucket.name,
+                Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
                 Key: key,
             })
         );

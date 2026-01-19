@@ -258,6 +258,7 @@ function ImageWithSkeleton({ src, alt, className, ...props }: any) {
           isLoaded ? "opacity-100" : "opacity-0"
         )}
         onLoad={() => setIsLoaded(true)}
+        unoptimized
         {...props}
       />
     </>
