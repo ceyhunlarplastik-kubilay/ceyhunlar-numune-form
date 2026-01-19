@@ -142,7 +142,8 @@ export async function POST(req: Request) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
         const safeName = sanitizeFileName(file.name);
-        const key = `products/${productId}/${Date.now()}-${safeName}`;
+        // const key = `products/${productId}/${Date.now()}-${safeName}`;
+        const key = `products/${productId}`;
 
         await s3.send(
             new PutObjectCommand({

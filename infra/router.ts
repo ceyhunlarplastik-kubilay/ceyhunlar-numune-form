@@ -1,4 +1,5 @@
 import config from "../config";
+import { publicBucket } from "./storage";
 
 const isPermanentStage = ["prod", "dev"].includes($app.stage);
 
@@ -22,3 +23,8 @@ export const appRouter = isPermanentStage
         },
     })
     : undefined;
+
+if (appRouter) {
+    appRouter.routeBucket("/products", publicBucket);
+    appRouter.routeBucket("/sectors", publicBucket);
+}

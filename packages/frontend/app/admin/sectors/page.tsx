@@ -146,7 +146,7 @@ export default function AdminSectorsPage() {
     mutationFn: async (sector: Sector) => {
       // 1) S3 görsel sil (varsa)
       if (sector.imageUrl) {
-        await deleteFromS3ByUrl(sector.imageUrl).catch(() => {});
+        await deleteFromS3ByUrl(sector.imageUrl).catch(() => { });
       }
       // 2) Sektör sil
       await axios.delete("/api/sectors", { params: { id: sector._id } });
@@ -308,7 +308,7 @@ export default function AdminSectorsPage() {
       updateMutation.mutate(payload, {
         onSuccess: async () => {
           if (shouldDeleteOld && originalImageUrl) {
-            await deleteFromS3ByUrl(originalImageUrl).catch(() => {});
+            await deleteFromS3ByUrl(originalImageUrl).catch(() => { });
           }
         },
       });
@@ -366,6 +366,7 @@ export default function AdminSectorsPage() {
                             alt={s.name}
                             fill
                             className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ) : (
@@ -429,6 +430,7 @@ export default function AdminSectorsPage() {
                       alt="Preview"
                       fill
                       className="object-cover"
+                      unoptimized
                     />
                     <button
                       onClick={removeImageUI}

@@ -338,7 +338,7 @@ export default function ProductsAdminPage() {
           .delete("/api/products/upload", {
             params: { url: product.imageUrl },
           })
-          .catch(() => {});
+          .catch(() => { });
       }
       // 2) Product sil
       const { data } = await axios.delete("/api/products", {
@@ -508,7 +508,7 @@ export default function ProductsAdminPage() {
             console.error(e);
             toast.error(
               "Ürün oluştu fakat görsel yüklenemedi: " +
-                (e.response?.data?.error || e.message)
+              (e.response?.data?.error || e.message)
             );
           }
           setUploading(false);
@@ -562,7 +562,7 @@ export default function ProductsAdminPage() {
             if (shouldDeleteOld && originalImageUrl) {
               try {
                 await deleteFromS3ByUrl(originalImageUrl);
-              } catch (e) {}
+              } catch (e) { }
             }
           },
         }
@@ -655,19 +655,19 @@ export default function ProductsAdminPage() {
             {(searchTerm ||
               selectedSector !== "all" ||
               selectedGroup !== "all") && (
-              <Button
-                variant="ghost"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedSector("all");
-                  setSelectedGroup("all");
-                }}
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Filtreleri Temizle
-              </Button>
-            )}
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedSector("all");
+                    setSelectedGroup("all");
+                  }}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Filtreleri Temizle
+                </Button>
+              )}
           </div>
         </CardContent>
       </Card>
@@ -750,6 +750,7 @@ export default function ProductsAdminPage() {
                                 fill
                                 className="object-cover"
                                 sizes="48px"
+                                unoptimized
                               />
                             </div>
                           ) : (
@@ -937,6 +938,7 @@ export default function ProductsAdminPage() {
                         alt="Preview"
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Button
