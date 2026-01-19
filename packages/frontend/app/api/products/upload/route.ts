@@ -94,7 +94,7 @@ export async function DELETE(req: Request) {
 
 
 
-import { Resource } from "sst";
+
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
 
         await s3.send(
             new PutObjectCommand({
-                Bucket: Resource.NumuneFormBucket.name,
+                Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
                 Key: key,
                 Body: buffer,
                 ContentType: file.type,
@@ -154,14 +154,15 @@ export async function POST(req: Request) {
             })
         );
 
-        const url = `https://${Resource.NumuneFormBucket.name}.s3.amazonaws.com/${key}`;
-        /* const stage = process.env.STAGE;
+        // const url = `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`;
+
+        const stage = process.env.STAGE;
         const domain = process.env.DOMAIN!;
 
         const url =
             stage === "prod" || stage === "dev"
                 ? `https://cdn.${domain}/${key}`
-                : `https://${Resource.NumuneFormBucket.name}.s3.amazonaws.com/${key}`; */
+                : `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`;
 
         return NextResponse.json({ url, key });
     } catch (err) {
@@ -192,7 +193,7 @@ export async function DELETE(req: Request) {
 
         await s3.send(
             new DeleteObjectCommand({
-                Bucket: Resource.NumuneFormBucket.name,
+                Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
                 Key: key,
             })
         );

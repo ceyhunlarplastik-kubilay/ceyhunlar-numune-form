@@ -1,4 +1,4 @@
-/* import config from "../config";
+import config from "../config";
 
 const isPermanentStage = ["prod", "dev"].includes($app.stage);
 
@@ -22,4 +22,3 @@ export const appRouter = isPermanentStage
         },
     })
     : undefined;
- */
