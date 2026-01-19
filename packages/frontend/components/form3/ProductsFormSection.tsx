@@ -183,7 +183,7 @@ export const ProductsFormSection = ({
                               "flex flex-col gap-2 p-3 rounded-lg border cursor-pointer transition-all",
                               "hover:bg-gray-100 hover:shadow-md",
                               isChecked &&
-                                "border-primary bg-primary/5 shadow-sm"
+                              "border-primary bg-primary/5 shadow-sm"
                             )}
                           >
                             <div className="relative w-full aspect-square rounded-md overflow-hidden bg-white border border-gray-100">
@@ -303,6 +303,7 @@ function ImageWithSkeleton({ src, alt, className, ...props }: any) {
           isLoaded ? "opacity-100" : "opacity-0"
         )}
         onLoad={() => setIsLoaded(true)}
+        unoptimized
         {...props}
       />
     </>
