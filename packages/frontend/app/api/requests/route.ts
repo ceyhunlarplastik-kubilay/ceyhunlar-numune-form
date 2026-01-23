@@ -6,7 +6,7 @@ import {
     Sector,
     Product,
     ProductionGroup,
-} from "@/models/index";
+} from "@/models";
 import { getGoogleSheets } from "@/lib/googleSheets";
 import SampleRequestEmail from "@/emails/SampleRequestEmail";
 import { sendMail } from "@/lib/mail/sendEmail";
@@ -24,95 +24,107 @@ export async function POST(req: Request) {
             lastName,
             email,
             phone,
+            province,
+            district,
             address,
-            sectorId,
-            products, // [{ productId, productionGroupId }]
+            sectorId,          // null => others
+            products = [],     // normal flow
+            customProducts = [] // others flow
         } = body;
+
+        const isOthers = sectorId === null;
 
         /* ------------------------------------------------------------------ */
         /* Basic validation                                                    */
         /* ------------------------------------------------------------------ */
 
-        if (!companyName || !email || !phone || !products?.length) {
+        if (!companyName || !email || !phone || !province || !district) {
             return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
         }
 
+        if (isOthers && customProducts.length === 0) {
+            return NextResponse.json(
+                { error: "En az bir özel ürün girilmelidir" },
+                { status: 400 }
+            );
+        }
+
+        if (!isOthers && products.length === 0) {
+            return NextResponse.json(
+                { error: "Lütfen en az bir ürün seçiniz" },
+                { status: 400 }
+            );
+        }
+
         /* ------------------------------------------------------------------ */
-        /* productionGroupIds derive                                           */
+        /* NORMAL FLOW: ProductAssignment doğrulaması                           */
         /* ------------------------------------------------------------------ */
 
-        const productionGroupIds = [
-            ...new Set(products.map((p: any) => p.productionGroupId)),
-        ];
+        if (!isOthers) {
+            for (const item of products) {
+                const match = await ProductAssignment.findOne({
+                    productId: item.productId,
+                    productionGroupId: item.productionGroupId,
+                    ...(sectorId && { sectorId }),
+                });
 
-        /* ------------------------------------------------------------------ */
-        /* 1) Doğrulama: ProductAssignment                                     */
-        /* ------------------------------------------------------------------ */
-
-        for (const item of products) {
-            const match = await ProductAssignment.findOne({
-                productId: item.productId,
-                productionGroupId: item.productionGroupId,
-                ...(sectorId && { sectorId }),
-            });
-
-            if (!match) {
-                return NextResponse.json(
-                    {
-                        error: `Ürün (${item.productId}) ile üretim grubu (${item.productionGroupId}) eşleşmesi hatalı`,
-                    },
-                    { status: 400 }
-                );
+                if (!match) {
+                    return NextResponse.json(
+                        { error: "Ürün / üretim grubu eşleşmesi hatalı" },
+                        { status: 400 }
+                    );
+                }
             }
         }
 
         /* ------------------------------------------------------------------ */
-        /* 2) Snapshot için gerekli dokümanları çek                            */
+        /* NORMAL FLOW: Snapshot                                               */
         /* ------------------------------------------------------------------ */
 
-        const productIds = products.map((p: any) => p.productId);
-        const groupIds = products.map((p: any) => p.productionGroupId);
+        let snapshotProducts: any[] = [];
+        let productionGroupIds: any[] = [];
 
-        const productDocs = await Product.find({ _id: { $in: productIds } })
-            .select("_id name")
-            .lean();
+        if (!isOthers) {
+            const productIds = products.map((p: any) => p.productId);
+            const groupIds = products.map((p: any) => p.productionGroupId);
 
-        const groupDocs = await ProductionGroup.find({
-            _id: { $in: groupIds },
-        })
-            .select("_id name")
-            .lean();
+            productionGroupIds = [...new Set(groupIds)];
 
-        const productMap = new Map(
-            productDocs.map((p) => [p._id.toString(), p])
-        );
+            const productDocs = await Product.find({ _id: { $in: productIds } })
+                .select("_id name")
+                .lean();
 
-        const groupMap = new Map(
-            groupDocs.map((g) => [g._id.toString(), g])
-        );
+            const groupDocs = await ProductionGroup.find({ _id: { $in: groupIds } })
+                .select("_id name")
+                .lean();
+
+            const productMap = new Map(
+                productDocs.map((p) => [p._id.toString(), p])
+            );
+
+            const groupMap = new Map(
+                groupDocs.map((g) => [g._id.toString(), g])
+            );
+
+            snapshotProducts = products.map((item: any) => {
+                const product = productMap.get(item.productId);
+                const group = groupMap.get(item.productionGroupId);
+
+                if (!product || !group) {
+                    throw new Error("Ürün veya üretim grubu bulunamadı");
+                }
+
+                return {
+                    productId: product._id,
+                    productName: product.name,
+                    productionGroupId: group._id,
+                    productionGroupName: group.name,
+                };
+            });
+        }
 
         /* ------------------------------------------------------------------ */
-        /* 3) Snapshot’lı products array oluştur                               */
-        /* ------------------------------------------------------------------ */
-
-        const snapshotProducts = products.map((item: any) => {
-            const product = productMap.get(item.productId);
-            const group = groupMap.get(item.productionGroupId);
-
-            if (!product || !group) {
-                throw new Error("Ürün veya üretim grubu bulunamadı");
-            }
-
-            return {
-                productId: product._id,
-                productName: product.name,
-                productionGroupId: group._id,
-                productionGroupName: group.name,
-            };
-        });
-
-        /* ------------------------------------------------------------------ */
-        /* 4) Request oluştur                                                  */
+        /* Request oluştur                                                     */
         /* ------------------------------------------------------------------ */
 
         const newRequest = await Request.create({
@@ -121,10 +133,13 @@ export async function POST(req: Request) {
             lastName,
             email,
             phone,
+            province,
+            district,
             address,
-            sectorId: sectorId || null,
-            productionGroupIds,
-            products: snapshotProducts,
+            sectorId: isOthers ? null : sectorId,
+            productionGroupIds: isOthers ? [] : productionGroupIds,
+            products: isOthers ? [] : snapshotProducts,
+            customProducts: isOthers ? customProducts : [],
             status: "pending",
             statusHistory: [
                 {
@@ -136,7 +151,7 @@ export async function POST(req: Request) {
         });
 
         /* ------------------------------------------------------------------ */
-        /* 5) Google Sheets & Email için isimler                               */
+        /* Google Sheets                                                       */
         /* ------------------------------------------------------------------ */
 
         const sectorDoc = sectorId
@@ -144,25 +159,22 @@ export async function POST(req: Request) {
             : null;
 
         const sectorName = sectorDoc?.name || "Diğerleri";
-        // @ts-ignore
-        const productNames = snapshotProducts.map((p: any) => p.productName).join(", ");
-        // @ts-ignore
-        const groupNames = snapshotProducts
-            .map((p: any) => p.productionGroupName)
-            .join(", ");
+
+        const productNames = isOthers
+            ? customProducts.map((p: any) => p.productName).join(", ")
+            : snapshotProducts.map((p: any) => p.productName).join(", ");
+
+        const groupNames = isOthers
+            ? customProducts.map((p: any) => p.productionGroupName).join(", ")
+            : snapshotProducts.map((p: any) => p.productionGroupName).join(", ");
 
         const fullName = [firstName, lastName].filter(Boolean).join(" ") || "-";
         const dateStr = new Date().toLocaleString("tr-TR");
-
-        /* ------------------------------------------------------------------ */
-        /* 6) Google Sheets                                                    */
-        /* ------------------------------------------------------------------ */
-
         try {
             const { sheets, spreadsheetId } = await getGoogleSheets();
             await sheets.spreadsheets.values.append({
                 spreadsheetId,
-                range: "Response!A:K",
+                range: "Response!A:M",
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [
@@ -173,6 +185,8 @@ export async function POST(req: Request) {
                             lastName || "-",
                             email,
                             phone,
+                            province,
+                            district,
                             address || "-",
                             sectorName,
                             groupNames,
@@ -182,12 +196,12 @@ export async function POST(req: Request) {
                     ],
                 },
             });
-        } catch (sheetError) {
-            console.error("Google Sheets hatası:", sheetError);
+        } catch (err) {
+            console.error("Google Sheets hatası:", err);
         }
 
         /* ------------------------------------------------------------------ */
-        /* 7) Email                                                            */
+        /* Email                                                               */
         /* ------------------------------------------------------------------ */
 
         try {
@@ -197,30 +211,30 @@ export async function POST(req: Request) {
                     fullName,
                     email,
                     phone,
+                    province,
+                    district,
                     address: address || "-",
-                    sector: sectorName,
+                    sector: isOthers ? "Diğerleri" : sectorName,
                     productionGroup: groupNames,
                     products: productNames,
                     date: dateStr,
                 })
             );
 
-            const adminEmail = process.env.ADMIN_EMAIL;
-            if (adminEmail) {
-                await sendMail({
-                    to: adminEmail,
-                    subject: `Yeni Numune Talebi: ${companyName}`,
-                    html: emailHtml,
-                });
-            }
-        } catch (mailError) {
-            console.error("Email hatası:", mailError);
+            /* await Promise.all(
+                ["kubilayuysal.ceyhunlarplastik@gmail.com"].map((to) =>
+                    sendMail({
+                        to,
+                        subject: `Yeni Numune Talebi: ${companyName}`,
+                        html: emailHtml,
+                    })
+                )
+            ); */
+        } catch (err) {
+            console.error("Email hatası:", err);
         }
 
-        return NextResponse.json(
-            { success: true, data: newRequest },
-            { status: 201 }
-        );
+        return NextResponse.json({ success: true, data: newRequest }, { status: 201 });
     } catch (error) {
         console.error("Submission Error:", error);
         return NextResponse.json(
@@ -231,55 +245,4 @@ export async function POST(req: Request) {
 }
 
 
-export async function PUT(req: Request) {
-    try {
-        await connectDB();
-        const body = await req.json();
-        const { id, status, note } = body;
 
-        if (!id || !status) {
-            return NextResponse.json(
-                { error: "ID and status are required" },
-                { status: 400 }
-            );
-        }
-
-        const validStatuses = [
-            "pending",
-            "review",
-            "approved",
-            "preparing",
-            "shipped",
-            "delivered",
-            "completed",
-            "cancelled",
-        ];
-
-        if (!validStatuses.includes(status)) {
-            return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-        }
-
-        const request = await Request.findById(id);
-
-        if (!request) {
-            return NextResponse.json({ error: "Request not found" }, { status: 404 });
-        }
-
-        request.status = status;
-        request.statusHistory.push({
-            status,
-            note: note || "",
-            timestamp: new Date(),
-        });
-
-        await request.save();
-
-        return NextResponse.json({ success: true, data: request });
-    } catch (error) {
-        console.error("Update Error:", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
-    }
-}

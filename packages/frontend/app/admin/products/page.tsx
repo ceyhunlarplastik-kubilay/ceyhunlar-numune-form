@@ -75,6 +75,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -106,21 +107,6 @@ interface ProductionGroup {
 /* -------------------------------------------------------------------------- */
 /*                                  FETCHERS                                  */
 /* -------------------------------------------------------------------------- */
-
-/* async function fetchProducts(
-  search: string,
-  sectorId: string,
-  productionGroupId: string
-): Promise<Product[]> {
-  const params: any = {};
-  if (search) params.search = search;
-  if (sectorId && sectorId !== "all") params.sectorId = sectorId;
-  if (productionGroupId && productionGroupId !== "all")
-    params.productionGroupId = productionGroupId;
-
-  const { data } = await axios.get<Product[]>("/api/products", { params });
-  return data;
-} */
 
 const PAGE_SIZE = 20;
 
@@ -577,336 +563,331 @@ export default function ProductsAdminPage() {
   return (
     <>
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-            Ürün Yönetimi
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Kataloğunuzdaki ürünleri filtreleyin, düzenleyin ve yönetin.
-          </p>
+      <header className="py-4 border-b mb-6 space-y-2">
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold">Endüstriyel Ürün Yönetimi</h1>
+          <AppBreadcrumb
+            items={[
+              { label: "Ana Sayfa", href: "/" },
+              { label: "Admin", href: "/admin" },
+              { label: "Endüstriyel Ürün Yönetimi" },
+            ]}
+          />
         </div>
-        <Button onClick={openCreateDialog} size="lg" className="shadow-sm">
-          <Plus className="w-5 h-5 mr-2" />
-          Yeni Ürün Ekle
-        </Button>
-      </div>
+      </header>
 
-      {/* FILTERS CARD */}
-      <Card className="shadow-sm border-none bg-white">
-        <CardContent className="p-4 md:p-6 grid gap-4 md:grid-cols-4 items-center">
-          {/* Search */}
-          <div className="relative md:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Ürün adı ara..."
-              className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Sector Filter */}
-          <div className="md:col-span-1">
-            <Select value={selectedSector} onValueChange={setSelectedSector}>
-              <SelectTrigger className="bg-gray-50 border-gray-200">
-                <div className="flex items-center gap-2 truncate">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <SelectValue placeholder="Sektör Seç" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Sektörler</SelectItem>
-                {sectors.map((s) => (
-                  <SelectItem key={s._id} value={s._id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Group Filter (Cascading) */}
-          <div className="md:col-span-1">
-            <Select
-              value={selectedGroup}
-              onValueChange={setSelectedGroup}
-              disabled={selectedSector === "all"}
-            >
-              <SelectTrigger className="bg-gray-50 border-gray-200">
-                <div className="flex items-center gap-2 truncate">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <SelectValue placeholder="Üretim Grubu Seç" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Gruplar</SelectItem>
-                {filterGroups.map((g) => (
-                  <SelectItem key={g.groupId} value={g.groupId}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Clear Filters */}
-          <div className="flex justify-end md:justify-start">
-            {(searchTerm ||
-              selectedSector !== "all" ||
-              selectedGroup !== "all") && (
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedSector("all");
-                    setSelectedGroup("all");
-                  }}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Filtreleri Temizle
-                </Button>
-              )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* PRODUCTS LIST */}
-      <Card className="shadow-md border border-gray-100 overflow-hidden">
-        <CardHeader className="bg-white border-b border-gray-100 pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">Ürün Listesi</CardTitle>
-              <CardDescription className="mt-1">
-                Bulunan toplam ürün:{" "}
-                <span className="font-medium text-foreground">
-                  {products.length}
-                </span>
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {productsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white">
-              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Ürünler yükleniyor...</p>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50">
-              <Search className="w-12 h-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Ürün bulunamadı
-              </h3>
-              <p className="text-muted-foreground max-w-sm text-center mt-2">
-                Arama kriterlerinize uygun ürün yok veya henüz hiç ürün
-                eklemediniz.
-              </p>
-              <Button
-                variant="link"
-                className="mt-4"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedSector("all");
-                  setSelectedGroup("all");
-                }}
-              >
-                Filtreleri Temizle
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="w-[80px]">Görsel</TableHead>
-                    <TableHead>Id</TableHead>
-                    <TableHead>Ürün Adı</TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Açıklama
-                    </TableHead>
-                    <TableHead className="text-right">İşlemler</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <AnimatePresence>
-                    {products.map((p) => (
-                      <motion.tr
-                        key={p._id}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="group hover:bg-gray-50/80 transition-colors border-b last:border-0"
-                      >
-                        <TableCell className="py-3">
-                          {p.imageUrl ? (
-                            <div className="relative w-12 h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
-                              <Image
-                                src={p.imageUrl}
-                                alt={p.name}
-                                fill
-                                className="object-cover"
-                                sizes="48px"
-                                unoptimized
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center text-xs text-gray-400 font-medium">
-                              YOK
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-semibold text-gray-800">
-                          {p._id}
-                        </TableCell>
-                        <TableCell className="font-semibold text-gray-800">
-                          {p.name}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground max-w-md truncate">
-                          {p.description || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => openEditDialog(p)}
-                            >
-                              <span className="sr-only">Düzenle</span>
-                              <Pencil className="h-4 w-4 text-blue-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => setDeletingProduct(p)}
-                            >
-                              <span className="sr-only">Sil</span>
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-        {/* {total > PAGE_SIZE && (
-          <CardFooter className="flex items-center justify-end space-x-2 py-4 border-t bg-gray-50/50">
-            <div className="flex-1 text-sm text-muted-foreground">
-              Toplam {Math.ceil(total / PAGE_SIZE)} sayfa ({total} ürün)
-            </div>
-            <div className="space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || productsLoading}
-              >
-                Önceki
-              </Button>
-              <div className="inline-flex items-center justify-center text-sm font-medium w-8">
-                {page}
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 mt-6">
+        <aside className="space-y-6">
+          {/* FILTERS CARD */}
+          <Card className="shadow-sm border-none bg-white">
+            <CardContent className="p-4 space-y-4">
+              {/* Search */}
+              <div className="relative md:col-span-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Ürün adı ara..."
+                  className="pl-9 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={
-                  page >= Math.ceil(total / PAGE_SIZE) || productsLoading
-                }
-              >
-                Sonraki
-              </Button>
-            </div>
-          </CardFooter>
-        )} */}
-        {totalPages > 1 && (
-          <CardFooter className="flex items-center justify-between border-t py-4">
-            <div className="text-sm text-muted-foreground">
-              Toplam {total} ürün · {totalPages} sayfa
-            </div>
 
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.max(1, p - 1));
+              {/* Sector Filter */}
+              <div className="md:col-span-1">
+                <Select
+                  value={selectedSector}
+                  onValueChange={(val) => {
+                    setSelectedSector(val);
+                    setPage(1);
+                  }}>
+                  <SelectTrigger className="w-full bg-gray-50 border-gray-200">
+                    <div className="flex items-center gap-2 truncate">
+                      <Filter className="w-4 h-4 text-muted-foreground" />
+                      <SelectValue placeholder="Sektör Seç" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Sektörler</SelectItem>
+                    {sectors.map((s) => (
+                      <SelectItem key={s._id} value={s._id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Group Filter (Cascading) */}
+              <div className="md:col-span-1">
+                <Select
+                  value={selectedGroup}
+                  onValueChange={setSelectedGroup}
+                  disabled={selectedSector === "all"}
+                >
+                  <SelectTrigger className="w-full bg-gray-50 border-gray-200">
+                    <div className="flex items-center gap-2 truncate">
+                      <Filter className="w-4 h-4 text-muted-foreground" />
+                      <SelectValue placeholder="Üretim Grubu Seç" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Gruplar</SelectItem>
+                    {filterGroups.map((g) => (
+                      <SelectItem key={g.groupId} value={g.groupId}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex justify-end md:justify-start">
+                {(searchTerm ||
+                  selectedSector !== "all" ||
+                  selectedGroup !== "all") && (
+                    <Button
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedSector("all");
+                        setSelectedGroup("all");
+                      }}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Filtreleri Temizle
+                    </Button>
+                  )}
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+
+        <main className="flex flex-col gap-6">
+          {/* PRODUCTS LIST */}
+          <Card className="shadow-md border border-gray-100 overflow-hidden">
+            <CardHeader className="bg-white border-b border-gray-100 pb-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl">Ürün Listesi</CardTitle>
+                  <CardDescription className="mt-1 text-sm text-muted-foreground">
+                    Bu sayfada{" "}
+                    <span className="font-medium text-foreground">
+                      {products.length}
+                    </span>{" "}
+                    ürün gösteriliyor · Toplam{" "}
+                    <span className="font-medium text-foreground">
+                      {total}
+                    </span>{" "}
+                    ürün (
+                    <span className="font-medium text-foreground">
+                      {totalPages}
+                    </span>{" "}
+                    sayfa)
+                  </CardDescription>
+                </div>
+
+                {/* ✅ YENİ ÜRÜN EKLE BUTONU */}
+                <Button onClick={openCreateDialog}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Yeni Ürün Ekle
+                </Button>
+              </div>
+            </CardHeader>
+
+
+            <CardContent className="p-0">
+              {productsLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-white">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Ürünler yükleniyor...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50">
+                  <Search className="w-12 h-12 text-gray-300 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Ürün bulunamadı
+                  </h3>
+                  <p className="text-muted-foreground max-w-sm text-center mt-2">
+                    Arama kriterlerinize uygun ürün yok veya henüz hiç ürün
+                    eklemediniz.
+                  </p>
+                  <Button
+                    variant="link"
+                    className="mt-4"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedSector("all");
+                      setSelectedGroup("all");
                     }}
-                    aria-disabled={page === 1}
-                    className={
-                      page === 1 ? "pointer-events-none opacity-50" : ""
-                    }
-                  />
-                </PaginationItem>
-
-                {/* Page numbers */}
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pageNumber = i + 1;
-
-                  // Çok sayfa varsa ortayı gösterelim
-                  if (
-                    totalPages > 7 &&
-                    pageNumber !== 1 &&
-                    pageNumber !== totalPages &&
-                    Math.abs(pageNumber - page) > 1
-                  ) {
-                    if (pageNumber === page - 2 || pageNumber === page + 2) {
-                      return (
-                        <PaginationItem key={pageNumber}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-                    return null;
-                  }
-
-                  return (
-                    <PaginationItem key={pageNumber}>
-                      <PaginationLink
+                  >
+                    Filtreleri Temizle
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-gray-50">
+                      <TableRow>
+                        <TableHead className="w-[80px]">Görsel</TableHead>
+                        <TableHead>Id</TableHead>
+                        <TableHead>Ürün Adı</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Açıklama
+                        </TableHead>
+                        <TableHead className="text-right">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <AnimatePresence>
+                        {products.map((p) => (
+                          <motion.tr
+                            key={p._id}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="group hover:bg-gray-50/80 transition-colors border-b last:border-0"
+                          >
+                            <TableCell className="py-3">
+                              {p.imageUrl ? (
+                                <div className="relative w-12 h-12 rounded-md overflow-hidden border border-gray-200 shadow-sm">
+                                  <Image
+                                    src={p.imageUrl}
+                                    alt={p.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="48px"
+                                    unoptimized
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center text-xs text-gray-400 font-medium">
+                                  YOK
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-semibold text-gray-800">
+                              {p._id}
+                            </TableCell>
+                            <TableCell className="font-semibold text-gray-800">
+                              {p.name}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-muted-foreground max-w-md truncate">
+                              {p.description || "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => openEditDialog(p)}
+                                >
+                                  <span className="sr-only">Düzenle</span>
+                                  <Pencil className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => setDeletingProduct(p)}
+                                >
+                                  <span className="sr-only">Sil</span>
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+            {totalPages > 1 && (
+              <CardFooter className="flex items-center justify-between border-t py-4">
+                <div className="text-sm text-muted-foreground">
+                  {`Toplam ${total} ürün`}
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
                         href="#"
-                        isActive={page === pageNumber}
                         onClick={(e) => {
                           e.preventDefault();
-                          setPage(pageNumber);
+                          setPage((p) => Math.max(1, p - 1));
                         }}
-                      >
-                        {pageNumber}
-                      </PaginationLink>
+                        aria-disabled={page === 1}
+                        className={
+                          page === 1 ? "pointer-events-none opacity-50" : ""
+                        }
+                      />
                     </PaginationItem>
-                  );
-                })}
 
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.min(totalPages, p + 1));
-                    }}
-                    aria-disabled={page === totalPages}
-                    className={
-                      page === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : ""
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </CardFooter>
-        )}
-      </Card>
+                    {/* Page numbers */}
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const pageNumber = i + 1;
+
+                      // Çok sayfa varsa ortayı gösterelim
+                      if (
+                        totalPages > 7 &&
+                        pageNumber !== 1 &&
+                        pageNumber !== totalPages &&
+                        Math.abs(pageNumber - page) > 1
+                      ) {
+                        if (pageNumber === page - 2 || pageNumber === page + 2) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={pageNumber}>
+                          <PaginationLink
+                            href="#"
+                            isActive={page === pageNumber}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage(pageNumber);
+                            }}
+                          >
+                            {pageNumber}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage((p) => Math.min(totalPages, p + 1));
+                        }}
+                        aria-disabled={page === totalPages}
+                        className={
+                          page === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </CardFooter>
+            )}
+          </Card>
+        </main>
+      </div>
+
       {/* CREATE / EDIT DIALOG */}
       <Dialog
         open={isDialogOpen}

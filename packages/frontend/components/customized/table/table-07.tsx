@@ -27,6 +27,8 @@ export interface Customer {
   lastName: string;
   email: string;
   phone: string;
+  province?: string; // İl
+  district?: string; // İlçe
   address: string;
   sector: string;
   productionGroups: string; // artık string (ör: "Bisiklet..., Kış Sporları")
@@ -88,6 +90,8 @@ export default function StickyColumnsTable({
               <TableHead className="min-w-[140px] border-b">Telefon</TableHead>
               <TableHead className="min-w-[140px] border-b">Durum</TableHead>
               {/* STATUS HEADER */}
+              <TableHead className="min-w-[120px] border-b">İl</TableHead>
+              <TableHead className="min-w-[120px] border-b">İlçe</TableHead>
               <TableHead className="min-w-[220px] border-b">Adres</TableHead>
               <TableHead className="min-w-[140px] border-b">Sektör</TableHead>
               {/* 🔥 Multi-group gösterimi */}
@@ -155,7 +159,7 @@ export default function StickyColumnsTable({
                       className={cn(
                         "h-8 w-[140px] border-0 text-xs font-medium focus:ring-0 focus:ring-offset-0",
                         statusMap[customer.status]?.color ||
-                          "bg-gray-100 text-gray-800"
+                        "bg-gray-100 text-gray-800"
                       )}
                     >
                       <SelectValue />
@@ -178,6 +182,8 @@ export default function StickyColumnsTable({
                   </Select>
                 </TableCell>
 
+                <TableCell>{customer.province || "-"}</TableCell>
+                <TableCell>{customer.district || "-"}</TableCell>
                 <TableCell>{customer.address}</TableCell>
 
                 {/* Sektör */}

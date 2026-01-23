@@ -26,7 +26,7 @@ export function AppBreadcrumb({ items }: AppBreadcrumbProps) {
 
     return (
         <Breadcrumb>
-            <BreadcrumbList>
+            <BreadcrumbList className="text-sm sm:text-base">
                 {items.map((item, index) => {
                     const isLast = index === lastIndex;
 

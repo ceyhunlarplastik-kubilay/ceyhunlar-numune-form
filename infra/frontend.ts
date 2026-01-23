@@ -53,6 +53,7 @@ export const frontend = new sst.aws.Nextjs("NumuneForm-Frontend", {
     MONGO_URI: config.MONGO_URI,
     SPREADSHEET_ID: config.SPREADSHEET_ID,
     NEXT_PUBLIC_BUCKET_NAME: publicBucket.name,
+    TURKIYE_API_URL: config.TURKIYE_API_URL,
   },
 });
 

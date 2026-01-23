@@ -26,41 +26,33 @@ export const PreviewFormSection = ({
   products: Array<{ productId: string; name: string }>;
 }) => {
   const values = form.getValues();
+
   const {
-    sektor, // sectorId or null
-    urunler, // [{ productId, productionGroupId }]
+    sektor,
+    urunler,
+    customProducts,
     firmaAdi,
     ad,
     soyad,
     email,
     telefon,
     adres,
+    il,
+    ilce,
   } = values;
 
-  /* -------------------------------------------------------------------------- */
-  /*                              SEKTÖR BİLGİSİ                                 */
-  /* -------------------------------------------------------------------------- */
+  const isOthers = sektor === "others";
 
-  const selectedSector = sectors.find((s) => s.sectorId === sektor);
+  /* ----------------------------- SEKTÖR ----------------------------- */
 
-  /* -------------------------------------------------------------------------- */
-  /*                       ÜRETİM GRUPLARINI TEKRARSIZ TOPLA                    */
-  /* -------------------------------------------------------------------------- */
+  const selectedSector =
+    sectors.find((s) => s.sectorId === sektor)?.name ||
+    (isOthers ? "Diğerleri" : "—");
 
-  const selectedGroupIds = Array.from(
-    new Set(urunler?.map((item: any) => item.productionGroupId))
-  );
+  /* ------------------------- NORMAL FLOW ----------------------------- */
 
-  const selectedGroups = selectedGroupIds
-    .map((gid) => groups.find((g) => g.groupId === gid))
-    .filter(Boolean);
-
-  /* -------------------------------------------------------------------------- */
-  /*                           ÜRÜNLERİ İSİM OLARAK ÇÖZ                          */
-  /* -------------------------------------------------------------------------- */
-
-  const selectedProducts = urunler
-    ?.map((item: any) => {
+  const selectedProductsNormal =
+    urunler?.map((item: any) => {
       const product = products.find((p) => p.productId === item.productId);
       const group = groups.find((g) => g.groupId === item.productionGroupId);
 
@@ -70,8 +62,25 @@ export const PreviewFormSection = ({
             groupName: group?.name ?? "—",
           }
         : null;
-    })
-    .filter(Boolean);
+    }).filter(Boolean) || [];
+
+  /* -------------------------- OTHERS FLOW ---------------------------- */
+
+  const selectedProductsOthers =
+    customProducts?.map((item: any) => ({
+      name: item.productName,
+      groupName: item.productionGroupName,
+    })) || [];
+
+  const selectedProducts = isOthers
+    ? selectedProductsOthers
+    : selectedProductsNormal;
+
+  const selectedGroups = Array.from(
+    new Set(selectedProducts.map((p: any) => p.groupName))
+  );
+
+  /* ------------------------------------------------------------------ */
 
   return (
     <FormSectionStickyWrapper
@@ -89,60 +98,50 @@ export const PreviewFormSection = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              {/* SEKTÖR */}
+              {/* Sektör */}
               <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Layers className="w-4 h-4" /> Sektör
                 </p>
-                <p className="font-medium text-lg text-foreground">
-                  {selectedSector?.name || "—"}
-                </p>
+                <p className="font-medium text-lg">{selectedSector}</p>
               </div>
 
-              {/* ÜRETİM GRUPLARI */}
+              {/* Üretim Grupları */}
               <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Package className="w-4 h-4" /> Üretim Grupları
                 </p>
-                <p className="font-medium text-lg text-foreground">
+                <p className="font-medium text-lg">
                   {selectedGroups.length > 0
-                    ? selectedGroups.map((g) => g!.name).join(", ")
+                    ? selectedGroups.join(", ")
                     : "—"}
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* --- Seçilen Ürünler --- */}
+          {/* --- Ürünler --- */}
           <Card className="md:col-span-2 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                Seçilen Ürünler ({selectedProducts?.length || 0})
+                Seçilen Ürünler ({selectedProducts.length})
               </CardTitle>
             </CardHeader>
 
             <CardContent>
-              {selectedProducts?.length > 0 ? (
+              {selectedProducts.length > 0 ? (
                 <div className="rounded-md border bg-background">
                   <table className="w-full text-sm">
                     <thead className="border-b">
                       <tr>
-                        <th className="h-12 px-4 text-left font-medium text-muted-foreground">
-                          Ürün Adı
-                        </th>
-                        <th className="h-12 px-4 text-left font-medium text-muted-foreground">
-                          Üretim Grubu
-                        </th>
+                        <th className="h-12 px-4 text-left">Ürün Adı</th>
+                        <th className="h-12 px-4 text-left">Üretim Grubu</th>
                       </tr>
                     </thead>
-
                     <tbody>
-                      {selectedProducts.map((item: any, index: number) => (
-                        <tr
-                          key={index}
-                          className="border-b hover:bg-muted/50 transition-colors"
-                        >
+                      {selectedProducts.map((item: any, i: number) => (
+                        <tr key={i} className="border-b">
                           <td className="p-4 font-medium">{item.name}</td>
                           <td className="p-4">{item.groupName}</td>
                         </tr>
@@ -152,7 +151,7 @@ export const PreviewFormSection = ({
                 </div>
               ) : (
                 <p className="text-muted-foreground italic p-4 text-center bg-muted/30 rounded-lg">
-                  Ürün seçilmedi.
+                  Ürün bilgisi girilmedi.
                 </p>
               )}
             </CardContent>
@@ -168,51 +167,16 @@ export const PreviewFormSection = ({
             </CardHeader>
 
             <CardContent className="grid gap-6 sm:grid-cols-2">
-              {/* Firma Adı */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Building2 className="w-4 h-4" /> Firma Adı
-                </p>
-                <p className="font-medium text-base">{firmaAdi}</p>
-                <Separator className="mt-2" />
-              </div>
-
-              {/* Yetkili Kişi */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <User className="w-4 h-4" /> Yetkili Kişi
-                </p>
-                <p className="font-medium text-base">
-                  {ad} {soyad}
-                </p>
-                <Separator className="mt-2" />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Mail className="w-4 h-4" /> E-posta
-                </p>
-                <p className="font-medium text-base">{email || "—"}</p>
-                <Separator className="mt-2" />
-              </div>
-
-              {/* Telefon */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Phone className="w-4 h-4" /> Telefon
-                </p>
-                <p className="font-medium text-base">{telefon}</p>
-                <Separator className="mt-2" />
-              </div>
-
-              {/* Adres */}
-              <div className="space-y-1 sm:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <MapPin className="w-4 h-4" /> Adres
-                </p>
-                <p className="font-medium text-base">{adres || "—"}</p>
-              </div>
+              <Info label="Firma Adı" value={firmaAdi} icon={<Building2 />} />
+              <Info
+                label="Yetkili Kişi"
+                value={`${ad || ""} ${soyad || ""}`.trim() || "—"}
+                icon={<User />}
+              />
+              <Info label="Email" value={email} icon={<Mail />} />
+              <Info label="Telefon" value={telefon} icon={<Phone />} />
+              <Info label="İl / İlçe" value={`${il} / ${ilce}`} icon={<MapPin />} />
+              <Info label="Adres" value={adres || "—"} icon={<MapPin />} full />
             </CardContent>
           </Card>
         </div>
@@ -220,3 +184,27 @@ export const PreviewFormSection = ({
     </FormSectionStickyWrapper>
   );
 };
+
+/* ------------------------------------------------------------------ */
+
+function Info({
+  label,
+  value,
+  icon,
+  full,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  full?: boolean;
+}) {
+  return (
+    <div className={`space-y-1 ${full ? "sm:col-span-2" : ""}`}>
+      <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        {icon} {label}
+      </p>
+      <p className="font-medium">{value}</p>
+      <Separator />
+    </div>
+  );
+}

@@ -1,34 +1,17 @@
-// import { Resource } from "sst";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { google } from "googleapis";
 import { Sector, ProductionGroup, Product, ProductAssignment, ImportLog } from "@/models/index";
 
-// const GOOGLE_PRIVATE_KEY_B64 = Resource.GooglePrivateKeyB64.value;
-// const GOOGLE_PRIVATE_KEY_B64 = Resource.GooglePrivateKey.value;
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
-
 export async function GET() {
     try {
         await connectDB();
-
-        /* if (!GOOGLE_PRIVATE_KEY_B64) {
-            throw new Error("GOOGLE_PRIVATE_KEY_B64 is missing");
-        } */
-        if (!GOOGLE_PRIVATE_KEY) {
-            throw new Error("GOOGLE_PRIVATE_KEY is missing");
-        }
-
-        // Decode the Base64 private key
-        // const decodedKey = Buffer.from(GOOGLE_PRIVATE_KEY_B64, 'base64').toString('utf8');
 
         // Google Auth
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: process.env.GOOGLE_CLIENT_EMAIL!,
-                // private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-                // private_key: decodedKey,
-                private_key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             },
             scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
         });
@@ -121,22 +104,11 @@ export async function POST(req: Request) {
 
         await connectDB();
 
-        /* if (!GOOGLE_PRIVATE_KEY_B64) {
-            throw new Error("GOOGLE_PRIVATE_KEY_B64 is missing");
-        } */
-        if (!GOOGLE_PRIVATE_KEY) {
-            throw new Error("GOOGLE_PRIVATE_KEY is missing");
-        }
-
         /* -------------------------- GOOGLE AUTH -------------------------- */
-       //  const decodedKey = Buffer.from(GOOGLE_PRIVATE_KEY_B64, 'base64').toString('utf8');
-
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: process.env.GOOGLE_CLIENT_EMAIL,
-                // private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-                // private_key: decodedKey,
-                private_key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             },
             scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
         });

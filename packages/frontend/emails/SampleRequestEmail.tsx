@@ -15,6 +15,8 @@ export interface SampleRequestEmailProps {
   fullName: string;
   email: string;
   phone: string;
+  province: string;
+  district: string;
   address: string;
   sector: string;
   productionGroup: string;
@@ -28,6 +30,8 @@ export default function SampleRequestEmail(props: SampleRequestEmailProps) {
     fullName,
     email,
     phone,
+    province,
+    district,
     address,
     sector,
     productionGroup,
@@ -89,6 +93,16 @@ export default function SampleRequestEmail(props: SampleRequestEmailProps) {
                   <tr className="bg-gray-50">
                     <td className="py-2 font-bold">Telefon:</td>
                     <td className="py-2">{phone}</td>
+                  </tr>
+
+                  <tr>
+                    <td className="py-2 font-bold">İl:</td>
+                    <td className="py-2">{province}</td>
+                  </tr>
+
+                  <tr className="bg-gray-50">
+                    <td className="py-2 font-bold">İlçe:</td>
+                    <td className="py-2">{district}</td>
                   </tr>
 
                   <tr>

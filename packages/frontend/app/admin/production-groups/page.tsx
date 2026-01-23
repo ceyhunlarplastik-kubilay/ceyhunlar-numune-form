@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
   SelectTrigger,
@@ -39,6 +39,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -71,8 +72,9 @@ export default function AdminProductionGroupsPage() {
   const [sectorId, setSectorId] = useState("");
   const [editing, setEditing] = useState<ProductionGroup | null>(null);
   const [deleting, setDeleting] = useState<ProductionGroup | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const [dependentProducts, setDependentProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -192,11 +194,18 @@ export default function AdminProductionGroupsPage() {
     setEditing(g);
     setName(g.name);
     setSectorId(g.sectorId._id);
-    setEditDialogOpen(true); // 🔥 dialog açılıyor
+    setIsDialogOpen(true);
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setName("");
+    setSectorId("");
+    setIsDialogOpen(true);
   };
 
   const closeDialog = () => {
-    setEditDialogOpen(false);
+    setIsDialogOpen(false);
     setEditing(null);
     setName("");
     setSectorId("");
@@ -226,7 +235,7 @@ export default function AdminProductionGroupsPage() {
   return (
     <div className="space-y-6">
       {/* CREATE / EDIT */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>
             {editing ? "Üretim Grubu Güncelle" : "Yeni Üretim Grubu"}
@@ -268,49 +277,84 @@ export default function AdminProductionGroupsPage() {
             </Button>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
+
+      <AppBreadcrumb
+        items={[
+          { label: "Ana Sayfa", href: "/" },
+          { label: "Admin", href: "/admin" },
+          { label: "Üretim Grupları" },
+        ]}
+      />
+
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Üretim Grupları</h1>
+          <p className="text-muted-foreground mt-1">
+            Sektörlere bağlı üretim gruplarını yönetin.
+          </p>
+        </div>
+
+        <Button onClick={openCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          Üretim Grubu Ekle
+        </Button>
+      </header>
+
 
       {/* LIST */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Mevcut Üretim Grupları</CardTitle>
+          <CardDescription>
+            Toplam {groups.length} üretim grubu · sektör bazında listelenmiştir
+          </CardDescription>
+        </CardHeader>
 
-      <Accordion type="single" collapsible className="space-y-4">
-        {groupedBySector.map(({ sector, groups }) => (
-          <AccordionItem
-            key={sector._id}
-            value={sector._id}
-            className="border rounded-lg bg-card text-card-foreground shadow-sm px-4"
-          >
-            <AccordionTrigger className="hover:no-underline py-4">
-              <span className="text-lg font-semibold">{sector.name}</span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-4 space-y-2">
-              {groups.map((g) => (
-                <div
-                  key={g._id}
-                  className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
-                >
-                  <span className="font-medium">{g.name}</span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openEdit(g)}
+        <CardContent className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-4">
+            {groupedBySector.map(({ sector, groups }) => (
+              <AccordionItem
+                key={sector._id}
+                value={sector._id}
+                className="border rounded-lg bg-card text-card-foreground shadow-sm px-4"
+              >
+                <AccordionTrigger className="hover:no-underline py-4">
+                  <span className="text-lg font-semibold">{sector.name}</span>
+                </AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4 space-y-2">
+                  {groups.map((g) => (
+                    <div
+                      key={g._id}
+                      className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
                     >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openDelete(g)}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+                      <span className="font-medium">{g.name}</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEdit(g)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openDelete(g)}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
+
+
 
       {/* DELETE DIALOG */}
       <AlertDialog open={!!deleting} onOpenChange={() => setDeleting(null)}>
@@ -365,16 +409,18 @@ export default function AdminProductionGroupsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+      <Dialog open={isDialogOpen} onOpenChange={(o) => !o && closeDialog()}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Üretim Grubu Güncelle</DialogTitle>
+            <DialogTitle>
+              {editing ? "Üretim Grubu Düzenle" : "Yeni Üretim Grubu"}
+            </DialogTitle>
             <DialogDescription>
-              Üretim grubunun adını veya sektörünü güncelleyin.
+              Üretim grubunun adını ve bağlı olduğu sektörü belirtin.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <Input
               placeholder="Grup adı"
               value={name}
@@ -386,7 +432,7 @@ export default function AdminProductionGroupsPage() {
                 <SelectValue placeholder="Sektör" />
               </SelectTrigger>
               <SelectContent>
-                {sectors.map((s: Sector) => (
+                {sectors.map((s: any) => (
                   <SelectItem key={s._id} value={s._id}>
                     {s.name}
                   </SelectItem>
@@ -395,19 +441,22 @@ export default function AdminProductionGroupsPage() {
             </Select>
           </div>
 
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={closeDialog}>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>
               İptal
             </Button>
             <Button
-              onClick={() => updateMutation.mutate()}
+              onClick={() =>
+                editing ? updateMutation.mutate() : createMutation.mutate()
+              }
               disabled={!name.trim() || !sectorId}
             >
-              Güncelle
+              {editing ? "Güncelle" : "Oluştur"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

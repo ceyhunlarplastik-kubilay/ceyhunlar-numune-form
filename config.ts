@@ -21,6 +21,7 @@ interface ENV {
     MONGO_URI: string | undefined;
     SPREADSHEET_ID: string | undefined;
     AWS_REGION: string | undefined;
+    TURKIYE_API_URL: string | undefined;
 }
 
 interface Config {
@@ -35,6 +36,7 @@ interface Config {
     MONGO_URI: string;
     SPREADSHEET_ID: string;
     AWS_REGION: string;
+    TURKIYE_API_URL: string;
 }
 
 const getConfig = (): ENV => {
@@ -50,6 +52,7 @@ const getConfig = (): ENV => {
         MONGO_URI: process.env.MONGO_URI,
         SPREADSHEET_ID: process.env.SPREADSHEET_ID,
         AWS_REGION: process.env.AWS_REGION,
+        TURKIYE_API_URL: process.env.TURKIYE_API_URL,
     };
 };
 

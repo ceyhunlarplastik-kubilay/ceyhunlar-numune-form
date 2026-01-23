@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRole } from "@/hooks/auth/useRole";
-import { motion } from "motion/react";
 
+/**
+ * Admin Navbar Actions
+ *
+ * SOL:
+ *  - Logo
+ *  - Sabit başlık (yan yana, hizalı)
+ *
+ * SAĞ:
+ *  - Clerk Auth components (AYNEN KALIR)
+ */
 export function AuthActions() {
   const { isAdmin } = useRole();
 
@@ -16,13 +28,8 @@ export function AuthActions() {
     const handleScroll = () => {
       const currentY = window.scrollY;
 
-      if (currentY > lastScrollY && currentY > 100) {
-        setHidden(true);
-      }
-
-      if (currentY < lastScrollY) {
-        setHidden(false);
-      }
+      if (currentY > lastScrollY && currentY > 100) setHidden(true);
+      if (currentY < lastScrollY) setHidden(false);
 
       setLastScrollY(currentY);
     };
@@ -32,46 +39,35 @@ export function AuthActions() {
   }, [lastScrollY]);
 
   return (
-    <motion.header
-      initial={false}
-      animate={{
-        y: hidden ? -120 : 0,
-        opacity: hidden ? 0 : 1,
-      }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="
-    sticky top-0 z-40 w-full
-    backdrop-blur
-    border-b border-black/5
-
-    /* SOFT BACKGROUND */
-    bg-gradient-to-b
-    from-[color-mix(in_oklab,var(--color-brand)_6%,white)]
-    to-[color-mix(in_oklab,var(--color-brand)_2%,white)]
-
-    shadow-[0_1px_0_rgba(0,0,0,0.03)]
-  "
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="w-full flex items-center justify-between"
     >
+      {/* LEFT */}
+      <div className="flex items-center gap-4 min-w-0">
+        {/* LOGO */}
+        <Link href="/admin" className="flex items-center shrink-0">
+          <Image
+            src="/ceyhunlar.png"
+            alt="Ceyhunlar Plastik"
+            width={140}
+            height={32}
+            className="object-contain"
+            priority
+            unoptimized
+          />
+        </Link>
 
-      <div
-        className="
-          max-w-7xl mx-auto
-          px-6
-          h-[88px]
-          flex items-center justify-between
-        "
-      >
-        {/* LEFT SIDE – TITLE */}
-        <div className="flex flex-col leading-tight">
-          <span className="text-lg font-semibold text-gray-900">
-            Admin Panel
-          </span>
-          <span className="text-sm text-muted-foreground">
-            Ceyhunlar Plastik
-          </span>
-        </div>
+        {/* TITLE */}
+        <h1 className="text-lg sm:text-xl font-semibold text-gray-900 whitespace-nowrap">
+          Admin Paneli
+        </h1>
+      </div>
 
-        {/* RIGHT SIDE – AUTH */}
+      {/* RIGHT — Clerk Auth */}
+      <div className="flex items-center gap-3 shrink-0">
         <SignedIn>
           <div className="flex items-center gap-4">
             {isAdmin && (
@@ -99,6 +95,6 @@ export function AuthActions() {
           </SignInButton>
         </SignedOut>
       </div>
-    </motion.header>
+    </motion.div>
   );
 }
