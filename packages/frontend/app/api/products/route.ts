@@ -1,8 +1,15 @@
-import mongoose from "mongoose";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Product, ProductAssignment, Request } from "@/models/index";
+import { Product, ProductAssignment } from "@/models/index";
 import { requireAdmin } from "@/lib/auth";
+
+const s3 = new S3Client({});
+
+function getS3KeyFromUrl(url: string) {
+    const u = new URL(url);
+    return u.pathname.startsWith("/") ? u.pathname.slice(1) : u.pathname;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                    GET                                     */
@@ -200,9 +207,29 @@ export async function PUT(req: Request) {
         // Update product fields
         if (name !== undefined) product.name = name.trim();
         if (description !== undefined) product.description = description.trim();
+
+        const oldImageUrl = product.imageUrl;
         if (imageUrl !== undefined) product.imageUrl = imageUrl.trim(); // TODO: S3 integration
 
         await product.save();
+
+        // 🧹 S3 CLEANUP (IMAGE REMOVED)
+        if (
+            oldImageUrl &&
+            (!imageUrl || imageUrl.trim() === "")
+        ) {
+            try {
+                const key = getS3KeyFromUrl(oldImageUrl);
+                await s3.send(
+                    new DeleteObjectCommand({
+                        Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
+                        Key: key,
+                    })
+                );
+            } catch (err) {
+                console.error("S3 image delete failed", err);
+            }
+        }
 
         // If assignments are provided, update them
         if (assignments && Array.isArray(assignments)) {
@@ -243,62 +270,37 @@ export async function DELETE(req: Request) {
     const authError = await requireAdmin();
     if (authError) return authError;
 
-    try {
-        await connectDB();
+    await connectDB();
 
-        const { searchParams } = new URL(req.url);
-        const productId = searchParams.get("productId");
+    const { searchParams } = new URL(req.url);
+    const productId = searchParams.get("productId");
 
-        if (!productId) {
-            return NextResponse.json(
-                { error: "productId query param zorunludur" },
-                { status: 400 }
-            );
-        }
-
-        // ✅ ObjectId validation
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return NextResponse.json(
-                { error: "Invalid productId" },
-                { status: 400 }
-            );
-        }
-
-        const product = await Product.findById(productId);
-        if (!product) {
-            return NextResponse.json(
-                { error: "Ürün bulunamadı" },
-                { status: 404 }
-            );
-        }
-
-        // 1) Cascade delete: ProductAssignments
-        const assignmentResult = await ProductAssignment.deleteMany({ productId });
-
-        // 2) (Opsiyonel) Request içinde productId null'la
-        // ❗ Zorunlu değil, istersen tamamen kaldırabilirsin
-        await Request.updateMany(
-            { "products.productId": productId },
-            { $set: { "products.$[p].productId": null } },
-            { arrayFilters: [{ "p.productId": productId }] }
-        );
-
-        // 3) Delete product
-        await Product.findByIdAndDelete(productId);
-
-        return NextResponse.json({
-            success: true,
-            message: "Ürün silindi",
-            details: {
-                removedAssignments: assignmentResult.deletedCount,
-            },
-        });
-    } catch (error) {
-        console.error("Product DELETE Error:", error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+    const product = await Product.findById(productId);
+    if (!product) {
+        return NextResponse.json({ error: "Ürün bulunamadı" }, { status: 404 });
     }
+
+    // ✅ S3 CLEANUP DOĞRU YER
+    if (product.imageUrl) {
+        try {
+            const key = getS3KeyFromUrl(product.imageUrl);
+
+            await s3.send(
+                new DeleteObjectCommand({
+                    Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
+                    Key: key,
+                })
+            );
+        } catch (err) {
+            console.error("S3 cleanup failed", err);
+            // ❗ ürünü silmeye devam et
+        }
+    }
+
+    await ProductAssignment.deleteMany({ productId });
+    await Product.findByIdAndDelete(productId);
+
+    return NextResponse.json({ success: true });
 }
+
 

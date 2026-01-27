@@ -3,9 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import Image from "next/image";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Loader2, Upload, X } from "lucide-react";
+
+import { toastSuccess, toastError } from "@/lib/toast-helpers";
+
+import { useSectors, useCreateSector, useUpdateSector, Sector } from "@/features/sectors";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,12 +47,8 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
+import { SectorCard } from "@/features/sectors/components/SectorCard";
 
-interface Sector {
-  _id: string;
-  name: string;
-  imageUrl?: string;
-}
 
 interface ProductionGroup {
   _id: string;
@@ -87,11 +86,7 @@ export default function AdminSectorsPage() {
   /* -------------------------------------------------------------------------- */
   /*                                    DATA                                    */
   /* -------------------------------------------------------------------------- */
-
-  const { data: sectors = [], isLoading } = useQuery({
-    queryKey: ["sectors"],
-    queryFn: async () => (await axios.get("/api/sectors")).data,
-  });
+  const { data: sectors = [], isLoading } = useSectors();
 
   /* -------------------------------------------------------------------------- */
   /*                                  MUTATIONS                                 */
@@ -113,74 +108,76 @@ export default function AdminSectorsPage() {
     });
   }
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      // 1. Create sector
-      const { data: sector } = await axios.post("/api/sectors", {
-        name: name.trim(),
-      });
-
-      // 2. Upload image if exists
-      if (selectedFile) {
-        const imageUrl = await uploadToS3(selectedFile, sector._id);
-
-        // 3. Update sector with image
-        await axios.put("/api/sectors", {
-          id: sector._id,
-          name: sector.name,
-          imageUrl,
+  /*   const createMutation = useMutation({
+      mutationFn: async () => {
+        // 1. Create sector
+        const { data: sector } = await axios.post("/api/sectors", {
+          name: name.trim(),
         });
-      }
+  
+        // 2. Upload image if exists
+        if (selectedFile) {
+          const imageUrl = await uploadToS3(selectedFile, sector._id);
+  
+          // 3. Update sector with image
+          await axios.put("/api/sectors", {
+            id: sector._id,
+            name: sector.name,
+            imageUrl,
+          });
+        }
+  
+        return sector;
+      },
+      onSuccess: () => {
+        toast.success("Sektör oluşturuldu");
+        qc.invalidateQueries({ queryKey: ["sectors"] });
+        closeDialog();
+      },
+      onError: (e: any) => {
+        toast.error(e.response?.data?.error || "Oluşturulamadı");
+      },
+    }); */
 
-      return sector;
-    },
-    onSuccess: () => {
-      toast.success("Sektör oluşturuldu");
-      qc.invalidateQueries({ queryKey: ["sectors"] });
-      closeDialog();
-    },
-    onError: (e: any) => {
-      toast.error(e.response?.data?.error || "Oluşturulamadı");
-    },
-  });
+  const createMutation = useCreateSector();
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!editing) throw new Error("Editing sector missing");
-
-      let finalImageUrl = editing.imageUrl || "";
-
-      // 1. Upload new image if selected
-      if (selectedFile) {
-        finalImageUrl = await uploadToS3(selectedFile, editing._id);
-      }
-
-      // 2. Update sector
-      await axios.put("/api/sectors", {
-        id: editing._id,
-        name: name.trim(),
-        imageUrl: removeImageFlag ? "" : finalImageUrl,
-      });
-
-      // 3. Delete old image if needed
-      const shouldDeleteOld =
-        originalImageUrl &&
-        (removeImageFlag ||
-          (finalImageUrl && finalImageUrl !== originalImageUrl));
-
-      if (shouldDeleteOld && originalImageUrl) {
-        await deleteFromS3ByUrl(originalImageUrl).catch(() => { });
-      }
-    },
-    onSuccess: () => {
-      toast.success("Sektör güncellendi");
-      qc.invalidateQueries({ queryKey: ["sectors"] });
-      closeDialog();
-    },
-    onError: (e: any) => {
-      toast.error(e.response?.data?.error || "Güncellenemedi");
-    },
-  });
+  /*   const updateMutation = useMutation({
+      mutationFn: async () => {
+        if (!editing) throw new Error("Editing sector missing");
+  
+        let finalImageUrl = editing.imageUrl || "";
+  
+        // 1. Upload new image if selected
+        if (selectedFile) {
+          finalImageUrl = await uploadToS3(selectedFile, editing._id);
+        }
+  
+        // 2. Update sector
+        await axios.put("/api/sectors", {
+          id: editing._id,
+          name: name.trim(),
+          imageUrl: removeImageFlag ? "" : finalImageUrl,
+        });
+  
+        // 3. Delete old image if needed
+        const shouldDeleteOld =
+          originalImageUrl &&
+          (removeImageFlag ||
+            (finalImageUrl && finalImageUrl !== originalImageUrl));
+  
+        if (shouldDeleteOld && originalImageUrl) {
+          await deleteFromS3ByUrl(originalImageUrl).catch(() => { });
+        }
+      },
+      onSuccess: () => {
+        toast.success("Sektör güncellendi");
+        qc.invalidateQueries({ queryKey: ["sectors"] });
+        closeDialog();
+      },
+      onError: (e: any) => {
+        toast.error(e.response?.data?.error || "Güncellenemedi");
+      },
+    }); */
 
   const deleteMutation = useMutation({
     mutationFn: async (sector: Sector) => {
@@ -192,19 +189,19 @@ export default function AdminSectorsPage() {
       await axios.delete("/api/sectors", { params: { id: sector._id } });
     },
     onSuccess: () => {
-      toast.success("Sektör silindi");
+      toastSuccess("Sektör silindi");
       qc.invalidateQueries({ queryKey: ["sectors"] });
       setDeleting(null);
       setDependentGroups([]);
     },
     onError: (e: any) => {
       if (e.response?.data?.details?.action) {
-        toast.error(e.response.data.error, {
+        toastError(e.response.data.error, {
           description: e.response.data.details.action,
           duration: 5000,
         });
       } else {
-        toast.error(e.response?.data?.error || "Silinemedi");
+        toastError(e.response?.data?.error || "Silinemedi");
       }
     },
   });
@@ -235,7 +232,8 @@ export default function AdminSectorsPage() {
 
     // Image Setup
     setOriginalImageUrl(s.imageUrl || null);
-    setPreviewUrl(s.imageUrl || "");
+    // setPreviewUrl(s.imageUrl || "");
+    setPreviewUrl(`${s.imageUrl}?v=${s.updatedAt || Date.now()}`);
     setSelectedFile(null);
     setRemoveImageFlag(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -281,13 +279,22 @@ export default function AdminSectorsPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const updateMutation = useUpdateSector({
+    editing,
+    name,
+    selectedFile,
+    removeImageFlag,
+    originalImageUrl: originalImageUrl || undefined,
+    closeDialog,
+  });
+
   const handleSubmit = () => {
     if (!name.trim()) return;
 
     if (editing) {
       updateMutation.mutate();
     } else {
-      createMutation.mutate();
+      createMutation.mutate({ name, file: selectedFile });
     }
   };
 
@@ -317,7 +324,7 @@ export default function AdminSectorsPage() {
         </Button>
       </div>
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Mevcut Sektörler</CardTitle>
           <CardDescription>
@@ -333,7 +340,7 @@ export default function AdminSectorsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Görsel</TableHead>
+                  <TableHead className="w-25">Görsel</TableHead>
                   <TableHead>Sektör Adı</TableHead>
                   <TableHead className="text-right">İşlemler</TableHead>
                 </TableRow>
@@ -343,12 +350,12 @@ export default function AdminSectorsPage() {
                   <TableRow key={s._id}>
                     <TableCell className="py-2">
                       {s.imageUrl ? (
-                        <div className="relative w-12 h-12 rounded-md overflow-hidden border">
+                        <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
                           <Image
-                            src={s.imageUrl}
+                            src={`${s.imageUrl}?v=${s.updatedAt || Date.now()}`}
                             alt={s.name}
                             fill
-                            className="object-cover"
+                            className="object-cover transition-transform hover:scale-105"
                             unoptimized
                           />
                         </div>
@@ -381,7 +388,36 @@ export default function AdminSectorsPage() {
             </Table>
           )}
         </CardContent>
+      </Card> */}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mevcut Sektörler</CardTitle>
+          <CardDescription>
+            Listelenen toplam sektör: {sectors.length}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {isLoading ? (
+            <div className="py-16 flex justify-center">
+              <Loader2 className="animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+              {sectors.map((s) => (
+                <SectorCard
+                  key={s._id}
+                  sector={s}
+                  onEdit={() => openEdit(s)}
+                  onDelete={() => openDelete(s)}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
       </Card>
+
 
       {/* CREATE / EDIT DIALOG */}
       <Dialog open={isOpen} onOpenChange={(o) => !o && closeDialog()}>

@@ -12,7 +12,6 @@ import { FormSectionHeader } from "@/components/form3/form-section/FormSectionHe
 import { ScrollSpyNavigation } from "@/components/ui/scroll-spy-navigation";
 import { Input } from "@/components/ui/input";
 
-import { useMultiStepViewer } from "@/hooks/use-multi-step-viewer";
 import { PreviousButton, NextButton } from "@/components/multi-step-viewer";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -24,7 +23,7 @@ export const ProductsFormSection = ({
   groups: Array<{
     groupId: string;
     name: string;
-    products: Array<{ productId: string; name: string; imageUrl?: string }>;
+    products: Array<{ productId: string; name: string; imageUrl?: string | null, createdAt: string; updatedAt: string}>;
   }>;
 }) => {
   const selectedProducts = form.watch("urunler");
@@ -188,7 +187,7 @@ export const ProductsFormSection = ({
                           >
                             <div className="relative w-full aspect-square rounded-md overflow-hidden bg-white border border-gray-100">
                               <ImageWithSkeleton
-                                src={product.imageUrl || "/dairy-products.png"}
+                                src={product.imageUrl && product.imageUrl.length > 0 ? `${product.imageUrl}?v=${product.updatedAt || Date.now()}` : "/dairy-products.png"}
                                 alt={product.name}
                                 fill
                                 className="object-cover"
@@ -287,6 +286,7 @@ export const ProductsFormSection = ({
 /* -------------------------------------------------------------------------- */
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Product } from "@/features/products/types";
 
 function ImageWithSkeleton({ src, alt, className, ...props }: any) {
   const [isLoaded, setIsLoaded] = useState(false);

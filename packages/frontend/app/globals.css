@@ -121,3 +121,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media (hover: none) {
+  .group\/flipping-card:hover > div {
+    transform: none !important;
+  }
+}
+

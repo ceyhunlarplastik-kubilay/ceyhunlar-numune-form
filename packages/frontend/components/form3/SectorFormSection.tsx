@@ -157,7 +157,7 @@ function SectorCard({
             className="relative rounded-md overflow-hidden mb-2 bg-muted/20"
           >
             <ImageWithSkeleton
-              src={sector.image}
+              src={`${sector.image}?v=${sector.updatedAt || Date.now()}`}
               alt={sector.name}
               fill
               className="object-cover"

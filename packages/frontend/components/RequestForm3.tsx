@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 
+import { useCatalogOptionsBySector } from "@/features/catalog";
+
 import { Form } from "@/components/ui/form";
 import { AsyncState } from "@/components/ui/async-state";
 
@@ -38,6 +40,8 @@ import { ContactFormSection } from "@/components/form3/ContactFormSection";
 import { PreviewFormSection } from "@/components/form3/PreviewFormSection";
 import { CustomProductFormSection } from "@/components/form3/CustomProductFormSection";
 import { Button } from "@/components/ui/button";
+
+import type { CatalogGroup } from "@/features/catalog";
 
 /* -------------------------------------------------------------------------- */
 /*                                ZOD SCHEMA                                  */
@@ -118,22 +122,6 @@ async function fetchSectors() {
   return res.json();
 }
 
-async function fetchGroups(sectorId: string) {
-  // "others" = Diğerleri seçimi, API'ye "all" olarak gönder
-  const queryId = sectorId === "others" ? "all" : sectorId;
-  const res = await fetch(`/api/catalog/options?sectorId=${queryId}`);
-  if (!res.ok) throw new Error("Üretim grupları yüklenemedi");
-  return res.json();
-}
-
-/* async function submitRequest(payload: any) {
-  const res = await fetch("/api/submit-request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-} */
 async function submitRequest(payload: any) {
   const res = await fetch("/api/requests", {
     method: "POST",
@@ -200,16 +188,14 @@ export default function RequestForm3() {
     selectedSector.length > 0 &&
     selectedSector !== "others";
 
+  // normalize et
+  const normalizedSector =
+    typeof selectedSector === "string" ? selectedSector : undefined;
 
-  const groupsQuery = useQuery({
-    queryKey: ["groups", selectedSector],
-    queryFn: () => fetchGroups(selectedSector!),
-    enabled: shouldFetchGroups,
-    staleTime: 1000 * 60 * 10, // 10 dakika cache
-    gcTime: 1000 * 60 * 30, // 30 dakika çöp toplama
-  });
+  const { data, isLoading, isError, error } =
+    useCatalogOptionsBySector(normalizedSector);
 
-  const groups = groupsQuery.data?.groups || [];
+  const groups = data?.groups ?? [];
 
   /* -------------------------------------------------------------------------- */
   /*                    RESET PRODUCTS WHEN SECTOR CHANGES                       */
@@ -237,8 +223,8 @@ export default function RequestForm3() {
 
   const productOptions = useMemo(
     () =>
-      groups.flatMap((g: any) =>
-        g.products.map((p: any) => ({
+      groups.flatMap((g: CatalogGroup) =>
+        g.products.map((p) => ({
           productId: p.productId,
           name: p.name,
         }))
@@ -291,14 +277,6 @@ export default function RequestForm3() {
       );
       groupName = groupWithProduct?.name;
     }
-
-    /* if (!groupName && data.urunler.length > 0) {
-      const firstProductId = data.urunler[0];
-      const groupWithProduct = groups.find((g: any) =>
-        g.products.some((p: any) => p.productId === firstProductId)
-      );
-      groupName = groupWithProduct?.name;
-    } */
 
     if (data.sektor === "others") {
       submitMutation.mutate({
@@ -397,9 +375,9 @@ export default function RequestForm3() {
         fields: ["urunler"],
         component: (
           <AsyncState
-            isLoading={groupsQuery.isLoading}
-            isError={groupsQuery.isError}
-            error={groupsQuery.error}
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
             loadingMessage="Ürünler yükleniyor..."
             loadingFallback={<ProductsSkeleton />}
           >

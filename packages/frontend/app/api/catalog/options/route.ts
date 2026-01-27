@@ -68,6 +68,8 @@ export async function GET(request: Request) {
                     productId: product._id.toString(),
                     name: product.name,
                     imageUrl: product.imageUrl || null,
+                    createdAt: product.createdAt,
+                    updatedAt: product.updatedAt,
                 });
             }
         }

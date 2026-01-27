@@ -43,6 +43,8 @@ export async function POST(req: Request) {
         // const key = `sectors/${sectorId}/${Date.now()}-${safeName}`;
         const key = `sectors/${sectorId}`;
 
+        const isPermanent = process.env.STAGE === "prod" || process.env.STAGE === "dev";
+
         await s3.send(
             new PutObjectCommand({
                 // Bucket: Resource.NumuneFormBucket.name,
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
                 Key: key,
                 Body: buffer,
                 ContentType: file.type,
-                CacheControl: "public, max-age=31536000",
+                CacheControl: isPermanent ? "public, max-age=31536000" : "no-cache",
             })
         );
 
@@ -59,10 +61,17 @@ export async function POST(req: Request) {
         const stage = process.env.STAGE;
         const domain = process.env.DOMAIN!;
 
-        const url =
+        /* const url =
             stage === "prod" || stage === "dev"
                 ? `https://cdn.${domain}/${key}`
-                : `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`;
+                : `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`; */
+
+        const url =
+            stage === "prod"
+                ? `https://cdn.${domain}/${key}`
+                : stage === "dev"
+                    ? `https://cdn.dev.${domain}/${key}`
+                    : `https://${process.env.NEXT_PUBLIC_BUCKET_NAME!}.s3.amazonaws.com/${key}`;
 
         return NextResponse.json({ url, key });
     } catch (err) {

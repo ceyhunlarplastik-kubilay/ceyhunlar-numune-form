@@ -1,10 +1,15 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IProduct extends Document {
-    name: string;
-    slug: string;
-    description?: string;
-    imageUrl?: string;
+export interface ProductBase {
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+}
+
+export interface IProduct extends ProductBase, Document {
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ProductSchema = new Schema<IProduct>(
