@@ -38,6 +38,7 @@ import { useProvinces } from "@/hooks/useProvinces";
 import { useDistricts } from "@/hooks/useDistricts";
 import { useSectors } from "@/hooks/useSectors";
 import { useProductionGroups } from "@/hooks/useProductionGroups";
+import { useClientRole } from "@/hooks/auth/useClientRole";
 import { Loader2, FileSpreadsheet } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
@@ -82,6 +83,17 @@ async function fetchCustomers(
 /* -------------------------------------------------------------------------- */
 
 export default function CustomersPageClient() {
+  const {
+    isLoaded,
+    canManageCustomers,
+    canExportCustomers,
+  } = useClientRole();
+
+  /* // Clerk hydrate olmadan UI çizilmesin
+  if (!isLoaded) {
+    return null;
+  } */
+
   const searchParams = useSearchParams();
   const initialPage = Number(searchParams?.get("page")) || 1;
 
@@ -127,8 +139,18 @@ export default function CustomersPageClient() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/customers?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Silinemedi");
+      if (!canManageCustomers) {
+        throw new Error("Forbidden");
+      }
+
+      const res = await fetch(`/api/customers?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Silinemedi");
+      }
+
       return res.json();
     },
     onSuccess: () => {
@@ -136,8 +158,8 @@ export default function CustomersPageClient() {
       setCustomerToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
-    onError: () => toast.error("Silme başarısız"),
   });
+
 
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -168,11 +190,19 @@ export default function CustomersPageClient() {
   const selectedProductionGroupName =
     productionGroups.find((pg) => pg._id === productionGroup)?.name;
 
-
   /* 🔥 Filtre değişince her zaman 1. sayfaya dön */
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, sector, productionGroup, province, district]);
+
+  // 🔐 SADECE UI'YI KİLİTLİYORUZ
+  if (!isLoaded) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -190,13 +220,15 @@ export default function CustomersPageClient() {
               ]}
             />
           </div>
-          <Button
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={() => setExportOpen(true)}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
-            Excel Export
-          </Button>
+          {canExportCustomers && (
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => setExportOpen(true)}
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel Export
+            </Button>
+          )}
 
           <ExportCustomersDialog
             open={exportOpen}
@@ -360,9 +392,16 @@ export default function CustomersPageClient() {
               ) : (
                 <StickyColumnsTable
                   customers={customersQuery.data?.customers || []}
-                  onDelete={(c) => setCustomerToDelete(c)}
-                  onStatusUpdate={(id, status) =>
-                    statusMutation.mutate({ id, status })
+                  canManage={canManageCustomers}
+                  onDelete={
+                    canManageCustomers
+                      ? (customer) => setCustomerToDelete(customer)
+                      : undefined
+                  }
+                  onStatusUpdate={
+                    canManageCustomers
+                      ? (id, status) => statusMutation.mutate({ id, status })
+                      : undefined
                   }
                 />
               )}
@@ -380,31 +419,33 @@ export default function CustomersPageClient() {
       </div >
 
       {/* DELETE DIALOG */}
-      < AlertDialog
-        open={!!customerToDelete
-        }
-        onOpenChange={() => setCustomerToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Silinsin mi?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <b>{customerToDelete?.companyName}</b> silinecek.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                variant="destructive"
-                onClick={() => deleteMutation.mutate(customerToDelete!.mongoId)}
-              >
-                Sil
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog >
+      {canManageCustomers && customerToDelete && (
+        < AlertDialog
+          open={!!customerToDelete
+          }
+          onOpenChange={() => setCustomerToDelete(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Silinsin mi?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <b>{customerToDelete?.companyName}</b> silinecek.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteMutation.mutate(customerToDelete!.mongoId)}
+                >
+                  Sil
+                </Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog >
+      )}
     </>
   );
 }

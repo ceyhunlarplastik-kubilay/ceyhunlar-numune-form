@@ -15,7 +15,7 @@ import type { Product } from "@/features/products/types";
 
 type DeleteProductPreview = Pick<Product, "_id" | "name">;
 
-interface ProductsAlertDialogProps {
+interface AdminProductsAlertDialogProps {
     deletingProduct: DeleteProductPreview | null;
     setDeletingProduct: (product: DeleteProductPreview | null) => void;
     deleteMutation: {
@@ -23,11 +23,11 @@ interface ProductsAlertDialogProps {
     };
 }
 
-export function ProductsAlertDialog({
+export function AdminProductsAlertDialog({
     deletingProduct,
     setDeletingProduct,
     deleteMutation
-}: ProductsAlertDialogProps) {
+}: AdminProductsAlertDialogProps) {
     return (
         <AlertDialog
             open={!!deletingProduct}

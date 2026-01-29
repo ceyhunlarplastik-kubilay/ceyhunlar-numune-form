@@ -14,7 +14,7 @@ import {
 import { ProductTable } from "@/features/products/components/ProductTable";
 import type { Product } from "@/features/products/types";
 
-interface ProductsCardProps {
+interface AdminProductsCardProps {
     products: Product[];
     loading: boolean;
     fetching?: boolean;
@@ -28,7 +28,7 @@ interface ProductsCardProps {
     openCreate: () => void;
 }
 
-export function ProductsCard({
+export function AdminProductsCard({
     products,
     loading,
     fetching = false,
@@ -40,7 +40,7 @@ export function ProductsCard({
     onDelete,
     setDeletingProduct,
     openCreate
-}: ProductsCardProps) {
+}: AdminProductsCardProps) {
     return (
         <main className="space-y-4">
             <Card>

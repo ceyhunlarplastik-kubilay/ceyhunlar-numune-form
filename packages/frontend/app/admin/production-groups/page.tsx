@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/accordion";
 import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
 
+import { AdminPageGuard } from "@/components/auth/AdminPageGuard";
+
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
 /* -------------------------------------------------------------------------- */
@@ -66,6 +68,14 @@ interface Product {
 /* -------------------------------------------------------------------------- */
 
 export default function AdminProductionGroupsPage() {
+  return (
+    <AdminPageGuard requiredRole="admin">
+      <ProductionGroupsContent />
+    </AdminPageGuard>
+  );
+}
+
+function ProductionGroupsContent() {
   const qc = useQueryClient();
 
   const [name, setName] = useState("");

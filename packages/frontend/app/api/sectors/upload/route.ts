@@ -1,8 +1,7 @@
 
-import { Resource } from "sst";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 
 const s3 = new S3Client({});
 
@@ -16,7 +15,7 @@ function getS3KeyFromUrl(url: string) {
 }
 
 export async function POST(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     try {
@@ -84,7 +83,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     try {

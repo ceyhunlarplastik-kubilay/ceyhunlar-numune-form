@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Sector, ProductionGroup, Product, ProductAssignment } from "@/models/index";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 
 export async function DELETE() {
     try {
-        const authError = await requireAdmin();
+        const authError = await requireAtLeastRole("admin");
         if (authError) return authError;
 
         await connectDB();

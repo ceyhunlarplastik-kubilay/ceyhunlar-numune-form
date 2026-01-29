@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRole } from "@/hooks/auth/useRole";
+import { useClientRole } from "@/hooks/auth/useClientRole";
 
 /**
  * Admin Navbar Actions
@@ -19,7 +20,10 @@ import { useRole } from "@/hooks/auth/useRole";
  *  - Clerk Auth components (AYNEN KALIR)
  */
 export function AuthActions() {
-  const { isAdmin } = useRole();
+  const {
+    isLoaded,
+    role,
+  } = useClientRole();
 
   const [hidden, setHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -37,6 +41,15 @@ export function AuthActions() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  // 🔐 SADECE UI'YI KİLİTLİYORUZ
+  if (!isLoaded) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -70,17 +83,17 @@ export function AuthActions() {
       <div className="flex items-center gap-3 shrink-0">
         <SignedIn>
           <div className="flex items-center gap-4">
-            {isAdmin && (
+            {role && (
               <span
                 className="
                   px-3 py-1
-                  text-xs font-semibold tracking-wide
+                  text-s font-semibold tracking-wide
                   rounded-full
-                  bg-[var(--color-brand)]
-                  text-[var(--color-brand-foreground)]
+                  bg-(--color-brand)
+                  text-(--color-brand-foreground)
                 "
               >
-                ADMIN
+                {role.toUpperCase()}
               </span>
             )}
             <UserButton />

@@ -2,7 +2,7 @@ import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Product, ProductAssignment } from "@/models/index";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 
 const s3 = new S3Client({});
 
@@ -33,10 +33,30 @@ export async function GET(req: Request) {
                 if (!product) {
                     return NextResponse.json({ error: "Ürün bulunamadı" }, { status: 404 });
                 }
-                return NextResponse.json(product);
+
+                // Get assignments for this product
+                const assignments = await ProductAssignment.find({
+                    productId: productIds[0]
+                }).lean();
+
+                return NextResponse.json({
+                    ...product,
+                    assignments: assignments || []
+                });
             }
             const products = await Product.find({ _id: { $in: productIds } }).lean();
-            return NextResponse.json(products);
+            
+            // Get assignments for all products
+            const allAssignments = await ProductAssignment.find({
+                productId: { $in: productIds }
+            }).lean();
+
+            const productsWithAssignments = products.map(p => ({
+                ...p,
+                assignments: allAssignments.filter((a: any) => a.productId.toString() === p._id.toString()) || []
+            }));
+
+            return NextResponse.json(productsWithAssignments);
         }
 
         // 2. Build Filter Query
@@ -103,7 +123,7 @@ export async function GET(req: Request) {
 /* -------------------------------------------------------------------------- */
 
 export async function POST(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     try {
@@ -180,7 +200,7 @@ export async function POST(req: Request) {
 /* -------------------------------------------------------------------------- */
 
 export async function PUT(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     try {
@@ -267,7 +287,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     await connectDB();

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { ProductionGroup, ProductAssignment } from "@/models/index";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 
 export async function GET(req: Request) {
     try {
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const authError = await requireAdmin();
+        const authError = await requireAtLeastRole("admin");
         if (authError) return authError;
 
         await connectDB();
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
     try {
-        const authError = await requireAdmin();
+        const authError = await requireAtLeastRole("admin");
         if (authError) return authError;
 
         await connectDB();
@@ -94,7 +94,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
     try {
-        const authError = await requireAdmin();
+        const authError = await requireAtLeastRole("admin");
         if (authError) return authError;
 
         await connectDB();

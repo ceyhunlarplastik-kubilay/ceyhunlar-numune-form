@@ -23,7 +23,7 @@ import { uploadProductImage } from "@/features/products/upload";
 import { fetchProduct } from "@/features/products/fetchers";
 
 import { useSectors } from "@/hooks/useSectors";
-import { useProductAssignments } from "@/hooks/useProductAssignments";
+// import { useProductAssignments } from "@/hooks/useProductAssignments";
 
 import { AssignmentRow } from "./AssignmentRow";
 import type { ProductFormValues } from "../types";
@@ -31,15 +31,22 @@ import { toast } from "sonner";
 
 /* -------------------------------------------------------------------------- */
 
-interface Props {
+interface AdminProductProps {
     open: boolean;
     productId: string | null;
     onClose: () => void;
 }
 
+const DEFAULT_VALUES: ProductFormValues = {
+    name: "",
+    description: "",
+    imageUrl: "",
+    assignments: [{ sectorId: "", productionGroupId: "" }],
+};
+
 /* -------------------------------------------------------------------------- */
 
-export function ProductDialog({ open, productId, onClose }: Props) {
+export function AdminProductDialog({ open, productId, onClose }: AdminProductProps) {
     const isEdit = Boolean(productId);
     const fileRef = useRef<HTMLInputElement>(null);
 
@@ -47,12 +54,7 @@ export function ProductDialog({ open, productId, onClose }: Props) {
     const [uploading, setUploading] = useState(false);
 
     const form = useForm<ProductFormValues>({
-        defaultValues: {
-            name: "",
-            description: "",
-            imageUrl: "",
-            assignments: [{ sectorId: "", productionGroupId: "" }],
-        },
+        defaultValues: DEFAULT_VALUES,
     });
 
     const { fields, append, remove } = useFieldArray({
@@ -64,52 +66,52 @@ export function ProductDialog({ open, productId, onClose }: Props) {
 
     const { data: sectors = [] } = useSectors();
 
-    const { data: assignmentsData } = useProductAssignments(
+    /* const { data: assignmentsData } = useProductAssignments(
         productId,
         open
-    );
+    ); */
 
     const createMutation = useCreateProduct();
     const updateMutation = useUpdateProduct();
 
     /* -------------------- LOAD PRODUCT (EDIT) -------------------- */
 
-    useEffect(() => {
-        if (!open) return;
-
-        // CREATE MODE RESET
-        if (!productId) {
-            form.reset({
-                name: "",
-                description: "",
-                imageUrl: "",
-                assignments: [{ sectorId: "", productionGroupId: "" }],
-            });
-            setPreview("");
-            return;
-        }
-
-        // EDIT MODE
-        (async () => {
-            const product = await fetchProduct(productId);
-            if (!product) return;
-
-            form.reset({
-                name: product.name,
-                description: product.description ?? "",
-                imageUrl: product.imageUrl ?? "",
-                assignments: [{ sectorId: "", productionGroupId: "" }],
-            });
-
-            if (product.imageUrl) {
-                setPreview(product.imageUrl);
+    /*     useEffect(() => {
+            if (!open) return;
+    
+            // CREATE MODE RESET
+            if (!productId) {
+                form.reset({
+                    name: "",
+                    description: "",
+                    imageUrl: "",
+                    assignments: [{ sectorId: "", productionGroupId: "" }],
+                });
+                setPreview("");
+                return;
             }
-        })();
-    }, [open, productId, form]);
+    
+            // EDIT MODE
+            (async () => {
+                const product = await fetchProduct(productId);
+                if (!product) return;
+    
+                form.reset({
+                    name: product.name,
+                    description: product.description ?? "",
+                    imageUrl: product.imageUrl ?? "",
+                    assignments: [{ sectorId: "", productionGroupId: "" }],
+                });
+    
+                if (product.imageUrl) {
+                    setPreview(product.imageUrl);
+                }
+            })();
+        }, [open, productId, form]); */
 
     /* -------------------- LOAD ASSIGNMENTS -------------------- */
 
-    useEffect(() => {
+    /* useEffect(() => {
         if (!assignmentsData) return;
 
         const normalized = assignmentsData.assignments.map((a) => ({
@@ -129,7 +131,99 @@ export function ProductDialog({ open, productId, onClose }: Props) {
                 ? normalized
                 : [{ sectorId: "", productionGroupId: "" }]
         );
-    }, [assignmentsData, form]);
+    }, [assignmentsData, form]); */
+
+    /* useEffect(() => {
+        // 🔥 Dialog kapandıysa HER ŞEYİ resetle
+        if (!open) {
+            form.reset({
+                name: "",
+                description: "",
+                imageUrl: "",
+                assignments: [{ sectorId: "", productionGroupId: "" }],
+            });
+            setPreview("");
+            return;
+        }
+
+        // ➕ CREATE MODE
+        if (!productId) {
+            form.reset({
+                name: "",
+                description: "",
+                imageUrl: "",
+                assignments: [{ sectorId: "", productionGroupId: "" }],
+            });
+            setPreview("");
+            return;
+        }
+
+        // ✏️ EDIT MODE
+        (async () => {
+            const product = await fetchProduct(productId);
+            if (!product) return;
+
+            const normalizedAssignments =
+                product.assignments?.map((a: any) => ({
+                    sectorId:
+                        typeof a.sectorId === "string"
+                            ? a.sectorId
+                            : a.sectorId._id,
+                    productionGroupId:
+                        typeof a.productionGroupId === "string"
+                            ? a.productionGroupId
+                            : a.productionGroupId._id,
+                })) ?? [{ sectorId: "", productionGroupId: "" }];
+
+            form.reset({
+                name: product.name,
+                description: product.description ?? "",
+                imageUrl: product.imageUrl ?? "",
+                assignments: normalizedAssignments,
+            });
+
+            setPreview(product.imageUrl ?? "");
+        })();
+    }, [open, productId]); */
+
+    useEffect(() => {
+        if (!open) return;
+
+        // ➕ CREATE MODE
+        if (!productId) {
+            form.reset(DEFAULT_VALUES);
+            setPreview("");
+            return;
+        }
+
+        // ✏️ EDIT MODE
+        fetchProduct(productId).then((product) => {
+            if (!product) return;
+
+            const normalizedAssignments =
+                product.assignments?.map((a: any) => ({
+                    sectorId:
+                        typeof a.sectorId === "string"
+                            ? a.sectorId
+                            : a.sectorId._id,
+                    productionGroupId:
+                        typeof a.productionGroupId === "string"
+                            ? a.productionGroupId
+                            : a.productionGroupId._id,
+                })) ?? DEFAULT_VALUES.assignments;
+
+            const resetData = {
+                name: product.name,
+                description: product.description ?? "",
+                imageUrl: product.imageUrl ?? "",
+                assignments: normalizedAssignments,
+            };
+
+            form.reset(resetData);
+            setPreview(product.imageUrl ?? "");
+        });
+    }, [open, productId, form]);
+
 
     /* -------------------- FILE -------------------- */
 

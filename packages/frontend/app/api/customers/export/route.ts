@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Request, Sector, Product, ProductionGroup } from "@/models";
 import * as XLSX from "xlsx";
 
 export async function GET(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     await connectDB();

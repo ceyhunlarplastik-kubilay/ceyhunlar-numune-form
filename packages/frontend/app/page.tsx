@@ -23,8 +23,8 @@ function HomeContent() {
   return (
     <main
       className="flex min-h-screen flex-col items-center justify-center 
-      bg-gradient-to-b from-[#ccb36e]/10 via-white to-white 
-      dark:from-[#ccb36e]/5 dark:via-zinc-900 dark:to-black
+      bg-linear-to-b from-brand/10 via-white to-white 
+      dark:from-brand/5 dark:via-zinc-900 dark:to-black
       py-2"
     >
       {/* Form Bileşeni */}

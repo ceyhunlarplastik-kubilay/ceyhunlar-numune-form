@@ -2,7 +2,7 @@
 
 import { AppBreadcrumb } from "@/components/breadcrumbs/AppBreadcrumb";
 
-export function ProductsHeader() {
+export function AdminProductsHeader() {
     return (
         <header className="space-y-2">
             <h1 className="text-xl font-bold">Endüstriyel Ürün Yönetimi</h1>

@@ -220,16 +220,17 @@ export async function POST(req: Request) {
                     date: dateStr,
                 })
             );
-
-            /* await Promise.all(
-                ["kubilayuysal.ceyhunlarplastik@gmail.com"].map((to) =>
-                    sendMail({
-                        to,
-                        subject: `Yeni Numune Talebi: ${companyName}`,
-                        html: emailHtml,
-                    })
-                )
-            ); */
+            if (process.env.STAGE === "prod") {
+                await Promise.all(
+                    ["kubilayuysal.ceyhunlarplastik@gmail.com", "mustafaoguzhanceyhun@gmail.com"].map((to) =>
+                        sendMail({
+                            to,
+                            subject: `Yeni Numune Talebi: ${companyName}`,
+                            html: emailHtml,
+                        })
+                    )
+                );
+            }
         } catch (err) {
             console.error("Email hatası:", err);
         }

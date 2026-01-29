@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Controller } from "react-hook-form";
 import { Trash2 } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
@@ -39,6 +40,7 @@ export function AssignmentRow({
     onRemove,
 }: Props) {
     const sectorId = form.watch(`assignments.${index}.sectorId`);
+    const productionGroupId = form.watch(`assignments.${index}.productionGroupId`);
 
     const { data } = useCatalogOptionsBySector(sectorId);
 
@@ -52,53 +54,61 @@ export function AssignmentRow({
             {/* SECTOR */}
             <div className="flex-1">
                 <Label className="text-xs text-muted-foreground">Sektör</Label>
-                <Select
-                    value={sectorId || ""}
-                    onValueChange={(val) => {
-                        form.setValue(`assignments.${index}.sectorId`, val, {
-                            shouldDirty: true,
-                        });
-                        form.setValue(`assignments.${index}.productionGroupId`, "", {
-                            shouldDirty: true,
-                        });
-                    }}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Sektör seç" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {sectors.map((s) => (
-                            <SelectItem key={s._id} value={s._id}>
-                                {s.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <Controller
+                    control={form.control}
+                    name={`assignments.${index}.sectorId`}
+                    render={({ field }) => (
+                        <Select
+                            value={field.value || ""}
+                            onValueChange={(val) => {
+                                field.onChange(val);
+                                form.setValue(
+                                    `assignments.${index}.productionGroupId`,
+                                    ""
+                                );
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Sektör seç" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {sectors.map((s) => (
+                                    <SelectItem key={s._id} value={s._id}>
+                                        {s.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                />
             </div>
 
             {/* GROUP */}
             <div className="flex-1">
                 <Label className="text-xs text-muted-foreground">Üretim Grubu</Label>
-                <Select
-                    value={form.watch(`assignments.${index}.productionGroupId`) || ""}
-                    onValueChange={(val) =>
-                        form.setValue(`assignments.${index}.productionGroupId`, val, {
-                            shouldDirty: true,
-                        })
-                    }
-                    disabled={!sectorId}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="Grup seç" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {groups.map((g) => (
-                            <SelectItem key={g.groupId} value={g.groupId}>
-                                {g.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+
+                <Controller
+                    control={form.control}
+                    name={`assignments.${index}.productionGroupId`}
+                    render={({ field }) => (
+                        <Select
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            disabled={!sectorId}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Grup seç" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {groups.map((g) => (
+                                    <SelectItem key={g.groupId} value={g.groupId}>
+                                        {g.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                />
             </div>
 
             {canRemove && (

@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 const MONGO_URI = process.env.MONGO_URI as string;
 
 if (!MONGO_URI) {
-    throw new Error("MongoUri secret not available");
+    throw new Error("MONGO_URI secret not available");
 }
 
 let cached = (global as any).mongoose;

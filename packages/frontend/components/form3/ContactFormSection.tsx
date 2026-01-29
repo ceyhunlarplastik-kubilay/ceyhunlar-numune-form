@@ -17,26 +17,56 @@ import { useProvinces } from "@/hooks/useProvinces";
 import { useDistricts } from "@/hooks/useDistricts";
 
 import { z } from "zod";
-import { isValidPhoneNumber } from "react-phone-number-input";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 
-/**
- * Gelişmiş Telefon Validasyonu
- * - Tüm ülkeler için çalışır
- * - Otomatik format kontrolü
- * - Ülkeye özel karakter sayısı kontrolü
- */
+// İyileştirilmiş telefon validasyonu
 export const phoneSchema = z
   .string()
+  .trim()
   .min(1, "Telefon numarası zorunludur.")
   .refine(
     (value) => {
       // Boş değer kontrolü
-      if (!value) return false;
-      // react-phone-number-input'un kendi validasyonu
-      return isValidPhoneNumber(value);
+      if (!value || value.length === 0) return false;
+
+      try {
+        const phone = parsePhoneNumberFromString(value, {
+          defaultCountry: "TR",
+          extract: false,
+        });
+
+        if (!phone) return false;
+
+        // Geçerli ve olası bir numara mı?
+        return phone.isValid() && phone.isPossible();
+      } catch (error) {
+        return false;
+      }
     },
     {
-      message: "Geçerli bir telefon numarası giriniz.",
+      message: "Lütfen geçerli bir telefon numarası giriniz.",
+    }
+  )
+  .refine(
+    (value) => {
+      try {
+        const phone = parsePhoneNumberFromString(value);
+        if (!phone) return true; // Önceki refine yakalayacak
+
+        // Türkiye numaraları için ek kontrol
+        if (phone.country === "TR") {
+          // TR numaraları 10 haneli olmalı (başındaki 0 hariç)
+          const nationalNumber = phone.nationalNumber;
+          return nationalNumber.length === 10;
+        }
+
+        return true;
+      } catch (error) {
+        return true;
+      }
+    },
+    {
+      message: "Türkiye için 10 haneli bir numara girmelisiniz.",
     }
   );
 
@@ -100,7 +130,7 @@ export const ContactFormSection = ({ form }: { form: any }) => {
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="space-y-1">
               <FieldLabel>E-posta</FieldLabel>
-              <Input {...field} type="email" placeholder="foo@bar.com" />
+              <Input {...field} type="email" placeholder="ornek@sirket.com" />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -111,14 +141,24 @@ export const ContactFormSection = ({ form }: { form: any }) => {
           name="telefon"
           control={form.control}
           render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid} className="space-y-1">
+            <Field 
+              data-invalid={fieldState.invalid} 
+              className="space-y-1"
+            >
               <FieldLabel>Telefon</FieldLabel>
 
               <PhoneInput
-                value={field.value}
-                onChange={field.onChange}
+                value={field.value || ""}
+                onChange={(value) => {
+                  // Değer değiştiğinde form'u touch et
+                  field.onChange(value ?? "");
+                  field.onBlur();
+                }}
+                onBlur={field.onBlur}
                 defaultCountry="TR"
-                placeholder="555 555 55 55"
+                international
+                countryCallingCodeEditable={false}
+                placeholder="5XX XXX XX XX"
               />
 
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -223,7 +263,7 @@ export const ContactFormSection = ({ form }: { form: any }) => {
             <Textarea
               {...field}
               placeholder="Şirket adresiniz..."
-              className="min-h-[100px]"
+              className="min-h-25"
             />
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </Field>

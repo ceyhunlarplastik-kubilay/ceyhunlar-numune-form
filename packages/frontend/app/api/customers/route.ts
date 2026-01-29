@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAtLeastRole } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Request, Sector, Product, ProductionGroup } from "@/models";
 
 const LIMIT = 10;
 
 export async function GET(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("moderator");
     if (authError) return authError;
 
     try {
@@ -243,7 +243,7 @@ export async function GET(req: Request) {
 
 
 export async function DELETE(req: Request) {
-    const authError = await requireAdmin();
+    const authError = await requireAtLeastRole("admin");
     if (authError) return authError;
 
     try {

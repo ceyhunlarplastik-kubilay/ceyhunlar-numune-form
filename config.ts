@@ -19,6 +19,7 @@ interface ENV {
     GOOGLE_CLIENT_EMAIL: string | undefined;
     GOOGLE_PRIVATE_KEY: string | undefined;
     MONGO_URI: string | undefined;
+    MONGO_GEO_URI: string | undefined;
     SPREADSHEET_ID: string | undefined;
     AWS_REGION: string | undefined;
     TURKIYE_API_URL: string | undefined;
@@ -34,6 +35,7 @@ interface Config {
     GOOGLE_CLIENT_EMAIL: string;
     GOOGLE_PRIVATE_KEY: string;
     MONGO_URI: string;
+    MONGO_GEO_URI: string;
     SPREADSHEET_ID: string;
     AWS_REGION: string;
     TURKIYE_API_URL: string;
@@ -50,6 +52,7 @@ const getConfig = (): ENV => {
         GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
         GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
         MONGO_URI: process.env.MONGO_URI,
+        MONGO_GEO_URI: process.env.MONGO_GEO_URI,
         SPREADSHEET_ID: process.env.SPREADSHEET_ID,
         AWS_REGION: process.env.AWS_REGION,
         TURKIYE_API_URL: process.env.TURKIYE_API_URL,

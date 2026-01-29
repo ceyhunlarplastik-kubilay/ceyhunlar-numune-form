@@ -51,6 +51,7 @@ export const frontend = new sst.aws.Nextjs("NumuneForm-Frontend", {
     GOOGLE_CLIENT_EMAIL: config.GOOGLE_CLIENT_EMAIL,
     GOOGLE_PRIVATE_KEY: config.GOOGLE_PRIVATE_KEY,
     MONGO_URI: config.MONGO_URI,
+    MONGO_GEO_URI: config.MONGO_GEO_URI,
     SPREADSHEET_ID: config.SPREADSHEET_ID,
     NEXT_PUBLIC_BUCKET_NAME: publicBucket.name,
     TURKIYE_API_URL: config.TURKIYE_API_URL,

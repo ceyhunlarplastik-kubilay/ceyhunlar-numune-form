@@ -16,7 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-interface ProductsFiltersProps {
+interface AdminProductsFiltersProps {
     searchTerm: string;
     setSearchTerm: (val: string) => void;
     selectedSector: string;
@@ -28,7 +28,7 @@ interface ProductsFiltersProps {
     setPage: (val: number) => void;
 }
 
-export function ProductsFilters({
+export function AdminProductsFilters({
     searchTerm,
     setSearchTerm,
     selectedSector,
@@ -38,7 +38,7 @@ export function ProductsFilters({
     setSelectedGroup,
     groups,
     setPage
-}: ProductsFiltersProps) {
+}: AdminProductsFiltersProps) {
     return (
         <aside>
             <Card>

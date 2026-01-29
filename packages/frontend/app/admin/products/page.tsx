@@ -5,22 +5,33 @@ import { useDebounce } from "use-debounce";
 
 import { useProducts } from "@/features/products/hooks";
 import { useDeleteProduct } from "@/features/products/mutations";
-import { ProductsHeader } from "@/features/products/components/ProductsHeader";
-import { ProductsFilters } from "@/features/products/components/ProductsFilters"
-import { ProductsCard } from "@/features/products/components/ProductsCard";
-import { ProductDialog } from "@/features/products/components/ProductDialog";
-import { ProductsAlertDialog } from "@/features/products/components/ProductAlertDialog";
+
+import { AdminProductsHeader } from "@/features/products/components/AdminProductsHeader";
+import { AdminProductsFilters } from "@/features/products/components/AdminProductsFilters"
+import { AdminProductsCard } from "@/features/products/components/AdminProductsCard";
+import { AdminProductDialog } from "@/features/products/components/AdminProductDialog";
+import { AdminProductsAlertDialog } from "@/features/products/components/AdminProductAlertDialog";
+
+import { AdminPageGuard } from "@/components/auth/AdminPageGuard";
 
 import { useSectors } from "@/hooks/useSectors";
 import { useProductionGroups } from "@/hooks/useProductionGroups";
 
 import type { Product } from "@/features/products/types";
 
+export default function AdminSectorsPage() {
+  return (
+    <AdminPageGuard requiredRole="admin">
+      <ProductsContent />
+    </AdminPageGuard>
+  );
+}
+
 type DeleteProductPreview = Pick<Product, "_id" | "name">;
 
 /* -------------------------------------------------------------------------- */
 
-export default function AdminProductsPage() {
+function ProductsContent() {
   /* ----------------------------- UI STATE ----------------------------- */
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,10 +89,10 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
-      <ProductsHeader />
+      <AdminProductsHeader />
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
-        <ProductsFilters
+        <AdminProductsFilters
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           selectedSector={selectedSector}
@@ -93,7 +104,7 @@ export default function AdminProductsPage() {
           setPage={setPage}
         />
 
-        <ProductsCard
+        <AdminProductsCard
           products={products}
           loading={isLoading}
           fetching={isFetching}
@@ -113,13 +124,14 @@ export default function AdminProductsPage() {
 
       </div>
 
-      <ProductDialog
+      <AdminProductDialog
+        key={editingProductId ?? "create"}
         open={dialogOpen}
         productId={editingProductId}
         onClose={() => setDialogOpen(false)}
       />
 
-      <ProductsAlertDialog
+      <AdminProductsAlertDialog
         deletingProduct={deletingProduct}
         setDeletingProduct={setDeletingProduct}
         deleteMutation={deleteMutation}
