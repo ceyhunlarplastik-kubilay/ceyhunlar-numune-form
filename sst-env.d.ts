@@ -5,10 +5,6 @@
 
 declare module "sst" {
   export interface Resource {
-    "NumuneForm-AppRouter": {
-      "type": "sst.aws.Router"
-      "url": string
-    }
     "NumuneForm-Frontend": {
       "type": "sst.aws.Nextjs"
       "url": string

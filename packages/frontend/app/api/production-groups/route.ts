@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { ProductionGroup, ProductAssignment } from "@/models/index";
+import { ProductionGroup, ProductAssignment, AuditLog } from "@/models/index";
 import { requireAtLeastRole } from "@/lib/auth";
+import { buildRequestMeta, getActorFromSession } from "@/lib/audit";
 
 export async function GET(req: Request) {
     try {
@@ -47,6 +48,16 @@ export async function POST(req: Request) {
         }
 
         const group = await ProductionGroup.create({ name, sectorId });
+
+        // 🧾 AUDIT LOG — CREATE
+        await AuditLog.create({
+            action: "CREATE",
+            entity: "ProductionGroup",
+            entityId: group._id.toString(),
+            actor: await getActorFromSession(),
+            request: buildRequestMeta(req),
+            after: group.toObject(),
+        });
         return NextResponse.json(group, { status: 201 });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -69,6 +80,15 @@ export async function PUT(req: Request) {
             );
         }
 
+        // 1️⃣ UPDATE ÖNCESİ
+        const before = await ProductionGroup.findById(id).lean();
+        if (!before) {
+            return NextResponse.json(
+                { error: "Production Group not found" },
+                { status: 404 }
+            );
+        }
+
         const updateData: any = {};
         if (name) updateData.name = name;
         if (sectorId) updateData.sectorId = sectorId;
@@ -85,6 +105,26 @@ export async function PUT(req: Request) {
                 { status: 404 }
             );
         }
+
+        // 🧾 AUDIT LOG — UPDATE
+        await AuditLog.create({
+            action: "UPDATE",
+            entity: "ProductionGroup",
+            entityId: id,
+            actor: await getActorFromSession(),
+            request: buildRequestMeta(req),
+            before,
+            after: group.toObject(),
+            changes: {
+                name: before.name !== group.name
+                    ? { from: before.name, to: group.name }
+                    : undefined,
+
+                sectorId: String(before.sectorId) !== String(group.sectorId)
+                    ? { from: before.sectorId, to: group.sectorId }
+                    : undefined,
+            },
+        });
 
         return NextResponse.json(group);
     } catch (error: any) {
@@ -117,6 +157,15 @@ export async function DELETE(req: Request) {
             );
         }
 
+        // 1️⃣ DELETE ÖNCESİ
+        const group = await ProductionGroup.findById(id).lean();
+        if (!group) {
+            return NextResponse.json(
+                { error: "Production Group not found" },
+                { status: 404 }
+            );
+        }
+
         // ✅ Check active product assignments
         const assignmentCount = await ProductAssignment.countDocuments({
             productionGroupId: id,
@@ -135,14 +184,18 @@ export async function DELETE(req: Request) {
             );
         }
 
-        const group = await ProductionGroup.findByIdAndDelete(id);
+        // 3️⃣ Sil
+        await ProductionGroup.deleteOne({ _id: id });
 
-        if (!group) {
-            return NextResponse.json(
-                { error: "Production Group not found" },
-                { status: 404 }
-            );
-        }
+        // 🧾 AUDIT LOG — DELETE
+        await AuditLog.create({
+            action: "DELETE",
+            entity: "ProductionGroup",
+            entityId: id,
+            actor: await getActorFromSession(),
+            request: buildRequestMeta(req),
+            before: group,
+        });
 
         return NextResponse.json({
             success: true,

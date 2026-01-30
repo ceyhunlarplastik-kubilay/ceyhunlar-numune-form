@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Sector, ProductionGroup } from "@/models";
+import { Sector, ProductionGroup, AuditLog } from "@/models";
 import { requireAtLeastRole } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
+import { buildRequestMeta, getActorFromSession} from "@/lib/audit";
 
 export async function GET() {
     try {
@@ -41,6 +43,18 @@ export async function POST(req: Request) {
 
         const sector = await Sector.create({ name, imageUrl });
         console.log("✅ Sector created:", sector);
+
+        const actor = await getActorFromSession();
+
+        // 👇 AUDIT LOG
+        await AuditLog.create({
+            action: "CREATE",
+            entity: "Sector",
+            entityId: sector._id.toString(),
+            actor: actor,
+            request: buildRequestMeta(req),
+            after: sector.toObject(),
+        });
         return NextResponse.json(sector, { status: 201 });
     } catch (error: any) {
         console.error("❌ POST /api/sectors Error:", error);
@@ -65,6 +79,12 @@ export async function PUT(req: Request) {
             );
         }
 
+        // 1️⃣ UPDATE ÖNCESİ KAYDI AL
+        const before = await Sector.findById(id).lean();
+        if (!before) {
+            return NextResponse.json({ error: "Sector not found" }, { status: 404 });
+        }
+
         const sector = await Sector.findByIdAndUpdate(
             id,
             { name, imageUrl },
@@ -79,6 +99,31 @@ export async function PUT(req: Request) {
                 { status: 404 }
             );
         }
+
+        // 3️⃣ AUTH
+        const actor = await getActorFromSession();
+
+        // 4️⃣ AUDIT LOG
+        await AuditLog.create({
+            action: "UPDATE",
+            entity: "Sector",
+            entityId: id,
+            actor: actor,
+            request: buildRequestMeta(req),
+            before,
+            after: sector.toObject(),
+            changes: {
+                name: before.name !== sector.name ? {
+                    from: before.name,
+                    to: sector.name,
+                } : undefined,
+
+                imageUrl: before.imageUrl !== sector.imageUrl ? {
+                    from: before.imageUrl,
+                    to: sector.imageUrl,
+                } : undefined,
+            },
+        });
 
         return NextResponse.json(sector);
     } catch (error: any) {
@@ -95,6 +140,7 @@ export async function DELETE(req: Request) {
             console.log("❌ Admin auth failed");
             return authError;
         }
+        const { userId, sessionClaims } = await auth();
 
         await connectDB();
         console.log("✅ DB Connected");
@@ -107,6 +153,16 @@ export async function DELETE(req: Request) {
             return NextResponse.json(
                 { error: "ID is required" },
                 { status: 400 }
+            );
+        }
+
+        // 1️⃣ Silinmeden ÖNCE sector'u al
+        const sector = await Sector.findById(id).lean();
+
+        if (!sector) {
+            return NextResponse.json(
+                { error: "Sector not found" },
+                { status: 404 }
             );
         }
 
@@ -140,18 +196,23 @@ export async function DELETE(req: Request) {
             );
         }
 
-        console.log("🗑️ Attempting to delete sector from DB...");
-        const sector = await Sector.findByIdAndDelete(id);
-
-        if (!sector) {
-            console.log("❌ Sector not found in DB");
-            return NextResponse.json(
-                { error: "Sector not found" },
-                { status: 404 }
-            );
-        }
+        // 3️⃣ Silme işlemi
+        await Sector.deleteOne({ _id: id });
 
         console.log("✅ Sector deleted successfully:", sector);
+
+        const actor = await getActorFromSession();
+
+        // 4️⃣ Audit log
+        await AuditLog.create({
+            action: "DELETE",
+            entity: "Sector",
+            entityId: id,
+            actor: actor,
+            request: buildRequestMeta(req),
+            before: sector,
+        });
+
         return NextResponse.json({
             success: true,
             message: "Sector deleted successfully",

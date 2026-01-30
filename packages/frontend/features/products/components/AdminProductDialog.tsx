@@ -25,6 +25,8 @@ import { fetchProduct } from "@/features/products/fetchers";
 import { useSectors } from "@/hooks/useSectors";
 // import { useProductAssignments } from "@/hooks/useProductAssignments";
 
+import { deleteProductImage } from "@/features/products/upload"
+
 import { AssignmentRow } from "./AssignmentRow";
 import type { ProductFormValues } from "../types";
 import { toast } from "sonner";
@@ -52,6 +54,8 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
 
     const [preview, setPreview] = useState<string>("");
     const [uploading, setUploading] = useState(false);
+
+    const [localPreview, setLocalPreview] = useState<string | null>(null);
 
     const form = useForm<ProductFormValues>({
         defaultValues: DEFAULT_VALUES,
@@ -232,11 +236,12 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
         if (!file) return;
 
         const url = URL.createObjectURL(file);
-        setPreview(url);
+        setLocalPreview(url);
     };
 
     const removeImage = () => {
         setPreview("");
+        setLocalPreview(null);
         form.setValue("imageUrl", "");
         if (fileRef.current) fileRef.current.value = "";
     };
@@ -253,16 +258,26 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
             // =========================
             // ✏️ EDIT MODE
             // =========================
-            if (isEdit && productId) {
+            /* if (isEdit && productId) {
                 let imageUrl = values.imageUrl;
 
                 if (fileRef.current?.files?.[0]) {
                     setUploading(true);
+
                     imageUrl = await uploadProductImage(
                         fileRef.current.files[0],
-                        productId
+                        productId,
+                        values.imageUrl
                     );
+
                     setUploading(false);
+
+                    // ✅ UPLOAD BAŞARILI
+                    if (imageUrl) {
+                        setPreview(imageUrl);               // gerçek URL
+                        setLocalPreview(null);              // 🔥 TEMP BLOB TEMİZLE
+                        form.setValue("imageUrl", imageUrl);
+                    }
                 }
 
                 await updateMutation.mutateAsync({
@@ -270,6 +285,56 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
                     name: values.name,
                     description: values.description,
                     imageUrl,
+                    assignments: validAssignments,
+                });
+
+                toast.success("Ürün güncellendi");
+                onClose();
+                return;
+            } */
+
+            // =========================
+            // ✏️ EDIT MODE
+            // =========================
+            if (isEdit && productId) {
+                const oldImageUrl = form.getValues("imageUrl");
+                let imageUrl = oldImageUrl;
+
+                // 🟢 1) YENİ GÖRSEL SEÇİLDİ → upload + eskiyi sil
+                if (fileRef.current?.files?.[0]) {
+                    setUploading(true);
+
+                    imageUrl = await uploadProductImage(
+                        fileRef.current.files[0],
+                        productId,
+                        oldImageUrl // 🔥 ESKİ RESMİ BACKEND'E BİLDİR
+                    );
+
+                    setUploading(false);
+
+                    if (imageUrl) {
+                        setPreview(imageUrl);
+                        setLocalPreview(null);
+                        form.setValue("imageUrl", imageUrl);
+                    }
+                }
+
+                // 🔴 2) GÖRSEL KALDIRILDI (butona basıldı, yeni dosya yok)
+                else if (!localPreview && oldImageUrl) {
+                    // 🔥 S3’ten eski resmi sil
+                    await deleteProductImage(oldImageUrl);
+
+                    imageUrl = "";
+                    form.setValue("imageUrl", "");
+                    setPreview("");
+                }
+
+                // 🧠 3) MongoDB güncelle
+                await updateMutation.mutateAsync({
+                    productId,
+                    name: values.name,
+                    description: values.description,
+                    imageUrl, // "" | yeni url
                     assignments: validAssignments,
                 });
 
@@ -297,11 +362,20 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
             let imageUrl = "";
             if (fileRef.current?.files?.[0]) {
                 setUploading(true);
+
                 imageUrl = await uploadProductImage(
                     fileRef.current.files[0],
                     newProductId
                 );
+
                 setUploading(false);
+
+                // ✅ UPLOAD BAŞARILI
+                if (imageUrl) {
+                    setPreview(imageUrl);
+                    setLocalPreview(null);              // 🔥 BURASI
+                    form.setValue("imageUrl", imageUrl);
+                }
             }
 
             if (imageUrl) {
@@ -348,10 +422,11 @@ export function AdminProductDialog({ open, productId, onClose }: AdminProductPro
                         <div className="space-y-3 w-full max-w-xs text-center">
                             <Label>Ürün Görseli</Label>
 
-                            {preview ? (
+                            {(localPreview || preview) ? (
                                 <div className="relative aspect-square w-full rounded-xl overflow-hidden border group">
                                     <img
-                                        src={preview}
+                                        key={`${productId}-${Date.now()}}`}
+                                        src={localPreview ? localPreview : `${preview}?t=${Date.now()}`}
                                         alt="Preview"
                                         className="object-cover w-full h-full"
                                     />

@@ -409,7 +409,7 @@ export default function RequestForm3() {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col py-6 px-2 sm:px-4 rounded-xl border bg-white shadow-sm min-h-[600px]"
+          className="flex flex-col py-6 px-2 sm:px-4 rounded-xl border bg-white shadow-sm min-h-150"
         >
           <MultiStepFormProvider
             stepsFields={stepsFields}

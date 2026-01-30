@@ -23,7 +23,7 @@ export const ProductsFormSection = ({
   groups: Array<{
     groupId: string;
     name: string;
-    products: Array<{ productId: string; name: string; imageUrl?: string | null, createdAt: string; updatedAt: string}>;
+    products: Array<{ productId: string; name: string; imageUrl?: string | null, createdAt: string; updatedAt: string }>;
   }>;
 }) => {
   const selectedProducts = form.watch("urunler");
@@ -187,9 +187,10 @@ export const ProductsFormSection = ({
                           >
                             <div className="relative w-full aspect-square rounded-md overflow-hidden bg-white border border-gray-100">
                               <ImageWithSkeleton
+                                key={`${product.productId}-${product.updatedAt}`}
                                 src={product.imageUrl && product.imageUrl.length > 0 ? `${product.imageUrl}?v=${product.updatedAt || Date.now()}` : "/dairy-products.png"}
                                 alt={product.name}
-                                fill
+                                // fill
                                 className="object-cover"
                               />
                             </div>
@@ -286,15 +287,18 @@ export const ProductsFormSection = ({
 /* -------------------------------------------------------------------------- */
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Product } from "@/features/products/types";
+// import { Product } from "@/features/products/types";
 
 function ImageWithSkeleton({ src, alt, className, ...props }: any) {
   const [isLoaded, setIsLoaded] = useState(false);
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [src]);
 
   return (
     <>
       {!isLoaded && <Skeleton className="w-full h-full absolute inset-0" />}
-      <Image
+      {/* <Image
         src={src}
         alt={alt}
         className={cn(
@@ -304,6 +308,17 @@ function ImageWithSkeleton({ src, alt, className, ...props }: any) {
         )}
         onLoad={() => setIsLoaded(true)}
         unoptimized
+        {...props}
+      /> */}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          className,
+          "transition-opacity duration-300",
+          isLoaded ? "opacity-100" : "opacity-0"
+        )}
+        onLoad={() => setIsLoaded(true)}
         {...props}
       />
     </>

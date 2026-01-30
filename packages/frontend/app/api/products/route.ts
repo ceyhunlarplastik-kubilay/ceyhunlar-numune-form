@@ -1,8 +1,10 @@
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Product, ProductAssignment } from "@/models/index";
+import { Product, ProductAssignment, AuditLog } from "@/models/index";
 import { requireAtLeastRole } from "@/lib/auth";
+import { getActorFromSession, buildRequestMeta } from "@/lib/audit";
+
 
 const s3 = new S3Client({});
 
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
                 });
             }
             const products = await Product.find({ _id: { $in: productIds } }).lean();
-            
+
             // Get assignments for all products
             const allAssignments = await ProductAssignment.find({
                 productId: { $in: productIds }
@@ -173,6 +175,19 @@ export async function POST(req: Request) {
 
         await ProductAssignment.insertMany(assignmentDocs);
 
+        // 3️⃣ AUDIT LOG — CREATE
+        await AuditLog.create({
+            action: "CREATE",
+            entity: "Product",
+            entityId: newProduct._id.toString(),
+            actor: await getActorFromSession(),
+            request: buildRequestMeta(req),
+            after: {
+                product: newProduct.toObject(),
+                assignments: assignmentDocs,
+            },
+        });
+
         return NextResponse.json(
             { success: true, product: newProduct, assignmentsCreated: assignmentDocs.length },
             { status: 201 }
@@ -224,17 +239,37 @@ export async function PUT(req: Request) {
             );
         }
 
+        const beforeProduct = product.toObject();
+        const beforeAssignments = await ProductAssignment.find({ productId }).lean();
+
         // Update product fields
         if (name !== undefined) product.name = name.trim();
         if (description !== undefined) product.description = description.trim();
 
         const oldImageUrl = product.imageUrl;
-        if (imageUrl !== undefined) product.imageUrl = imageUrl.trim(); // TODO: S3 integration
+        if (imageUrl !== undefined) {
+            const trimmedImageUrl = imageUrl.trim();
+            product.imageUrl = trimmedImageUrl;
+
+            // 🧹 S3 CLEANUP (IMAGE REPLACED)
+            if (trimmedImageUrl && oldImageUrl && trimmedImageUrl !== oldImageUrl) {
+                try {
+                    const key = getS3KeyFromUrl(oldImageUrl);
+                    await s3.send(
+                        new DeleteObjectCommand({
+                            Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
+                            Key: key,
+                        })
+                    );
+                } catch (err) {
+                    console.error("S3 previous image delete failed", err);
+                }
+            }
+        }
 
         await product.save();
-
         // 🧹 S3 CLEANUP (IMAGE REMOVED)
-        if (
+        /* if (
             oldImageUrl &&
             (!imageUrl || imageUrl.trim() === "")
         ) {
@@ -249,7 +284,21 @@ export async function PUT(req: Request) {
             } catch (err) {
                 console.error("S3 image delete failed", err);
             }
+        } */
+        if (oldImageUrl && imageUrl && oldImageUrl !== imageUrl) {
+            try {
+                const key = getS3KeyFromUrl(oldImageUrl);
+                await s3.send(
+                    new DeleteObjectCommand({
+                        Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
+                        Key: key,
+                    })
+                );
+            } catch (e) {
+                console.error("Old image cleanup failed", e);
+            }
         }
+
 
         // If assignments are provided, update them
         if (assignments && Array.isArray(assignments)) {
@@ -267,6 +316,57 @@ export async function PUT(req: Request) {
                 await ProductAssignment.insertMany(assignmentDocs);
             }
         }
+
+        const afterProduct = product.toObject();
+
+        const afterAssignments = await ProductAssignment.find({ productId }).lean();
+        function normalizeAssignments(list: any[]) {
+            return list
+                .map(a => `${a.sectorId}:${a.productionGroupId}`)
+                .sort();
+        }
+
+        await AuditLog.create({
+            action: "UPDATE",
+            entity: "Product",
+            entityId: productId,
+            actor: await getActorFromSession(),
+            request: buildRequestMeta(req),
+
+            before: {
+                product: beforeProduct,
+                assignments: beforeAssignments,
+            },
+
+            after: {
+                product: afterProduct,
+                assignments: afterAssignments,
+            },
+
+            changes: {
+                name: beforeProduct.name !== afterProduct.name
+                    ? { from: beforeProduct.name, to: afterProduct.name }
+                    : undefined,
+
+                description: beforeProduct.description !== afterProduct.description
+                    ? { from: beforeProduct.description, to: afterProduct.description }
+                    : undefined,
+
+                imageUrl: beforeProduct.imageUrl !== afterProduct.imageUrl
+                    ? { from: beforeProduct.imageUrl, to: afterProduct.imageUrl }
+                    : undefined,
+
+                assignments:
+                    JSON.stringify(normalizeAssignments(beforeAssignments)) !==
+                        JSON.stringify(normalizeAssignments(afterAssignments))
+                        ? {
+                            from: beforeAssignments,
+                            to: afterAssignments,
+                        }
+                        : undefined,
+            },
+        });
+
 
         return NextResponse.json({ success: true, product });
     } catch (error: any) {
@@ -317,10 +417,24 @@ export async function DELETE(req: Request) {
         }
     }
 
+    const beforeAssignments = await ProductAssignment.find({ productId }).lean();
+
     await ProductAssignment.deleteMany({ productId });
+
     await Product.findByIdAndDelete(productId);
+
+    await AuditLog.create({
+        action: "DELETE",
+        entity: "Product",
+        entityId: productId,
+        actor: await getActorFromSession(),
+        request: buildRequestMeta(req),
+        before: {
+            product: product.toObject(),
+            assignments: beforeAssignments,
+        },
+    });
 
     return NextResponse.json({ success: true });
 }
-
 

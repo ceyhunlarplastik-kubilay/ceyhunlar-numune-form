@@ -28,6 +28,7 @@ export async function POST(req: Request) {
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
         const productId = formData.get("productId") as string | null;
+        const oldImageUrl = formData.get("oldImageUrl") as string | null;
 
         if (!productId || productId === "undefined") {
             return NextResponse.json(
@@ -50,10 +51,30 @@ export async function POST(req: Request) {
             );
         }
 
+        console.log("UPLOAD oldImageUrl:", oldImageUrl);
+        if (oldImageUrl && oldImageUrl.includes(`/products/${productId}/`)) {
+            try {
+                const oldKey = getS3KeyFromUrl(oldImageUrl);
+                await s3.send(
+                    new DeleteObjectCommand({
+                        Bucket: process.env.NEXT_PUBLIC_BUCKET_NAME!,
+                        Key: oldKey,
+                    })
+                );
+            } catch (e) {
+                console.error("Old image delete failed", e);
+            }
+        }
+
         const buffer = Buffer.from(await file.arrayBuffer());
         // const safeName = sanitizeFileName(file.name);
         // const key = `products/${productId}/${Date.now()}-${safeName}`;
-        const key = `products/${productId}`;
+        // const key = `products/${productId}`;
+        const ext = file.type.split("/")[1]; // jpeg | png | webp
+        const version = Date.now();
+
+        const key = `products/${productId}/${version}.${ext}`;
+
 
         const isPermanent = process.env.STAGE === "prod" || process.env.STAGE === "dev";
 

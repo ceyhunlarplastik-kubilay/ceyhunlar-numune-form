@@ -112,7 +112,7 @@ export const ProductionGroupFormSection = ({ form, groups }: Props) => {
                     >
                       <CardHeader className="p-0">
                         {/* Image container */}
-                        <div className="relative w-full aspect-[4/3] rounded-t-lg overflow-hidden">
+                        <div className="relative w-full aspect-4/3 rounded-t-lg overflow-hidden">
                           <Image
                             src={getProductionGroupImage(group.name)}
                             alt={group.name}

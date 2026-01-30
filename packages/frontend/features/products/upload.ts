@@ -6,11 +6,15 @@ import axios from "axios";
 
 export async function uploadProductImage(
     file: File,
-    productId: string
+    productId: string,
+    oldImageUrl?: string
 ): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("productId", productId);
+    if (oldImageUrl) {
+        formData.append("oldImageUrl", oldImageUrl);
+    }
 
     const { data } = await axios.post("/api/products/upload", formData);
     return data.url;

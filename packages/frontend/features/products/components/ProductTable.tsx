@@ -75,115 +75,123 @@ export function ProductTable({
     }
 
     return (
-            <div className="relative rounded-lg border bg-white overflow-hidden">
-                {/* SOFT LOADING OVERLAY */}
-                <AnimatePresence>
-                    {fetching && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm cursor-progress"
-                        >
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Güncelleniyor...
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+        <div className="relative rounded-lg border bg-white overflow-hidden">
+            {/* SOFT LOADING OVERLAY */}
+            <AnimatePresence>
+                {fetching && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm cursor-progress"
+                    >
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Güncelleniyor...
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                {/* TABLE */}
-                <div
-                    className={cn(
-                        "transition-opacity",
-                        fetching && "opacity-60"
-                    )}
-                >
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/40">
-                                <TableRow>
-                                    <TableHead className="w-[20]">Görsel</TableHead>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Ürün Adı</TableHead>
-                                    <TableHead className="hidden md:table-cell">
-                                        Açıklama
-                                    </TableHead>
-                                    <TableHead className="text-right">İşlemler</TableHead>
-                                </TableRow>
-                            </TableHeader>
+            {/* TABLE */}
+            <div
+                className={cn(
+                    "transition-opacity",
+                    fetching && "opacity-60"
+                )}
+            >
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-muted/40">
+                            <TableRow>
+                                <TableHead className="w-[20]">Görsel</TableHead>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Ürün Adı</TableHead>
+                                <TableHead className="hidden md:table-cell">
+                                    Açıklama
+                                </TableHead>
+                                <TableHead className="text-right">İşlemler</TableHead>
+                            </TableRow>
+                        </TableHeader>
 
-                            <TableBody>
-                                <AnimatePresence>
-                                    {products.map((p) => (
-                                        <motion.tr
-                                            layout
-                                            key={p._id}
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            transition={{ duration: 0.2, ease: "easeOut" }}
-                                            className="border-b last:border-0 hover:bg-muted/30"
-                                        >
-                                            <TableCell>
-                                                {p.imageUrl ? (
-                                                    <div className="relative w-12 h-12 rounded-md overflow-hidden border">
-                                                        <Image
+                        <TableBody>
+                            <AnimatePresence>
+                                {products.map((p) => (
+                                    <motion.tr
+                                        layout
+                                        key={p._id}
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -4 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
+                                        className="border-b last:border-0 hover:bg-muted/30"
+                                    >
+                                        <TableCell>
+                                            {p.imageUrl ? (
+                                                <div className="relative w-12 h-12 rounded-md overflow-hidden border">
+                                                    {/* <Image
+                                                            key={`${p._id}-${p.updatedAt}`}
                                                             src={`${p.imageUrl}?v=${p.updatedAt|| Date.now()}`}
                                                             alt={p.name}
                                                             fill
                                                             className="object-cover"
                                                             unoptimized
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                                                        YOK
-                                                    </div>
-                                                )}
-                                            </TableCell>
+                                                        /> */}
+                                                    <img
+                                                        key={`${p._id}-${p.updatedAt}`}
+                                                        src={`${p.imageUrl}?v=${p.updatedAt}`}
+                                                        alt={p.name}
+                                                        className="object-cover w-full h-full"
+                                                    />
 
-                                            <TableCell className="font-medium">
-                                                {p._id}
-                                            </TableCell>
-
-                                            <TableCell className="font-medium">
-                                                {p.name}
-                                            </TableCell>
-
-                                            <TableCell className="hidden md:table-cell text-muted-foreground truncate max-w-md">
-                                                {p.description || "-"}
-                                            </TableCell>
-
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        onClick={() => onEdit(p._id)}
-                                                    >
-                                                        <Pencil className="w-4 h-4 text-blue-600" />
-                                                    </Button>
-
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        onClick={() => onDelete(p._id)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4 text-red-600" />
-                                                    </Button>
                                                 </div>
-                                            </TableCell>
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                                                    YOK
+                                                </div>
+                                            )}
+                                        </TableCell>
 
-                                        </motion.tr>
-                                    ))}
-                                </AnimatePresence>
-                            </TableBody>
-                        </Table>
-                    </div>
+                                        <TableCell className="font-medium">
+                                            {p._id}
+                                        </TableCell>
+
+                                        <TableCell className="font-medium">
+                                            {p.name}
+                                        </TableCell>
+
+                                        <TableCell className="hidden md:table-cell text-muted-foreground truncate max-w-md">
+                                            {p.description || "-"}
+                                        </TableCell>
+
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    onClick={() => onEdit(p._id)}
+                                                >
+                                                    <Pencil className="w-4 h-4 text-blue-600" />
+                                                </Button>
+
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    onClick={() => onDelete(p._id)}
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+
+                                    </motion.tr>
+                                ))}
+                            </AnimatePresence>
+                        </TableBody>
+                    </Table>
                 </div>
-                {/* PAGINATION */}
+            </div>
+            {/* PAGINATION */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                     <Pagination>
@@ -252,6 +260,6 @@ export function ProductTable({
                     </Pagination>
                 </div>
             )}
-            </div>
+        </div>
     );
 }

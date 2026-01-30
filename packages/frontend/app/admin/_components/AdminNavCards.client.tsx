@@ -171,6 +171,30 @@ export function AdminNavCards() {
                     </Card>
                 </motion.div>
 
+                {/* İşlem Kayıtları */}
+                {canManageCustomers ? <motion.div variants={cardVariants} whileHover={{ scale: 1.015 }}>
+                    <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow h-full">
+                        <div className="flex flex-col h-full">
+                            <CardHeader className="space-y-2">
+                                <CardTitle className="flex items-center gap-2">
+                                    <Layers className="h-5 w-5 text-purple-500" />
+                                    İşlem Kayıtları (Audit Log)
+                                </CardTitle>
+                                <CardDescription>
+                                    Admin kullanıcıların sistem üzerinde yaptığı
+                                    <strong> sektör, üretim grubu ve ürün </strong>
+                                    oluşturma, güncelleme ve silme işlemlerini kayıt altına alır.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-2 mt-auto">
+                                <Button asChild variant="outline" className="w-full border-purple-200 hover:bg-purple-50 hover:text-purple-700">
+                                    <Link href="/admin/audit-logs">Kayıtları Görüntüle</Link>
+                                </Button>
+                            </CardContent>
+                        </div>
+                    </Card>
+                </motion.div> : null}
+
                 {/* Diğer kartları aynı pattern ile devam ettir */}
             </motion.div>
             {/* Info Alert */}
